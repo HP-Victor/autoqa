@@ -1,0 +1,11 @@
+version: '3'
+
+services:
+  computer:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "5900:5900"
+    environment:
+      - DISPLAY=:99
