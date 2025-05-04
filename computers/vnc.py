@@ -12,7 +12,7 @@ class VNCComputer(AsyncComputer):
     def __init__(
         self,
         host="localhost",
-        port=5901,
+        port=5900,
         username=None,
         password=None,
     ):
