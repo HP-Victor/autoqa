@@ -4,7 +4,24 @@ A tool that uses OpenAI Agents to control a virtual Ubuntu environment and perfo
 
 ## Setup
 
-### Option 1: Local Setup with Virtual Environment
+### Local Setup with Virtual Environment
+
+## Prerequisites
+
+This tool requires a VNC (Virtual Network Computing) server running on localhost:5900.
+
+VNC is a graphical desktop-sharing system that allows you to remotely control another computer. The tool connects to this VNC server to interact with a virtual Ubuntu environment.
+
+By default, the application is configured to connect to:
+
+- Host: localhost
+- Port: 5900
+- Username: ubuntu
+- Password: secret
+
+**If there is no application configured on localhost:5900 the script won't work.**
+
+### Setup:
 
 1. Create and activate a virtual environment:
 
@@ -24,14 +41,6 @@ A tool that uses OpenAI Agents to control a virtual Ubuntu environment and perfo
    ```bash
    echo "OPENAI_API_KEY=your-api-key" > .env
    ```
-
-4. Build and start the computer:
-
-   ```bash
-   docker-compose up -d
-   ```
-
-5. You can connect to the virtual display using a VNC client at `localhost:5900` (password: "secret")
 
 ## Running the Demo
 
