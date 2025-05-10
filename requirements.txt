@@ -1,2 +1,4 @@
 openai==1.77.0
 openai-agents==0.0.14
+numpy==1.24.3
+asyncvnc==0.0.1

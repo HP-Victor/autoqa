@@ -12,9 +12,22 @@ if not OPENAI_API_KEY:
     print("Warning: OPENAI_API_KEY not found in environment variables")
     print("Please set your OpenAI API key in the .env file or environment")
 
+VNC_HOST = os.getenv("VNC_HOST")
+VNC_PORT = os.getenv("VNC_PORT")
+VNC_PASSWORD = os.getenv("VNC_PASSWORD")
+
+if not VNC_HOST:
+    print("Warning: VNC_HOST not found in environment variables")
+if not VNC_PORT:
+    print("Warning: VNC_PORT not found in environment variables")
+if not VNC_PASSWORD:
+    print("Warning: VNC_PASSWORD not found in environment variables")
 
 computer = VNCComputer(
-    host="localhost", username="ubuntu", port=5900, password="secret"
+    host=VNC_HOST if VNC_HOST is not None else "localhost", 
+    username="ubuntu", 
+    port=int(VNC_PORT) if VNC_PORT is not None else 5900, 
+    password=VNC_PASSWORD
 )
 
 math_agent = Agent(
