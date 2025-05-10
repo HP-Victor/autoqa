@@ -6,6 +6,10 @@ on:
       - main
 
 env:
+  VNC_PASSWORD: ${{ secrets.VNC_PASSWORD }}
+  VNC_HOST: ${{ secrets.VNC_HOST }}
+  VNC_PORT: ${{ secrets.VNC_PORT }}
+  OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
   PYTHON_VERSION: "3.10"
 
 jobs:
