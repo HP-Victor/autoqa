@@ -146,14 +146,6 @@ jobs:
           mkdir -p artifacts
           cp -f screenshot_*.png artifacts/ 2>/dev/null || true
 
-      - name: Upload artifacts
-        if: always()
-        uses: actions/upload-artifact@v3
-        with:
-          name: screenshots
-          path: artifacts
-          retention-days: 7
-
       - name: Cleanup Docker containers
         if: always()
         working-directory: autoqa/docker
