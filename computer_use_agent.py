@@ -24,13 +24,13 @@ if not VNC_PASSWORD:
     print("Warning: VNC_PASSWORD not found in environment variables")
 
 computer = VNCComputer(
-    host=VNC_HOST if VNC_HOST is not None else "localhost", 
-    username="ubuntu", 
-    port=int(VNC_PORT) if VNC_PORT is not None else 5900, 
+    host=VNC_HOST if VNC_HOST is not None else "localhost",
+    username="ubuntu",
+    port=int(VNC_PORT) if VNC_PORT is not None else 5900,
     password=VNC_PASSWORD
 )
 
-math_agent = Agent(
+computer_use_agent = Agent(
     model="computer-use-preview",
     model_settings=ModelSettings(
         truncation="auto",
@@ -45,34 +45,3 @@ math_agent = Agent(
     Explain what you're doing as you complete tasks.""",
     tools=[ComputerTool(computer)],
 )
-
-
-async def main():
-    print("Initializing Advanced Math Tutor agent...")
-
-    result = Runner.run_streamed(
-        math_agent,
-        "Open firefox and go to mitchellhynes.com",
-        max_turns=100,
-    )
-
-    async for event in result.stream_events():
-        if hasattr(event, "type"):
-            event_type = event.type
-
-            if event_type == "raw_response_event":
-                data = event.data
-                if hasattr(data, "type"):
-                    if data.type == "response.reasoning_summary_text.done" and hasattr(
-                        data, "text"
-                    ):
-                        print(f"🧠 Agent reasoning: {data.text}")
-
-    print(f"Response: {result.final_output}")
-
-
-if __name__ == "__main__":
-    print("Starting AutoQA...")
-    asyncio.run(main())
-
-print("Done")

@@ -7,10 +7,6 @@ on:
 
 env:
   PYTHON_VERSION: "3.10"
-  VNC_HOST: localhost
-  VNC_PORT: 5900
-  VNC_PASSWORD: secret
-  OPENAI_MODEL: computer-use-preview
 
 jobs:
   run-autoqa:
@@ -31,101 +27,6 @@ jobs:
           pip install -r requirements.txt
           pip install python-dotenv
 
-      - name: Set up Docker
-        uses: docker/setup-buildx-action@v2
-
-      - name: Start VNC container
-        working-directory: autoqa/docker
-        run: |
-          # Give the container time to initialize
-          sleep 10
-
-      - name: Create agent settings
-        working-directory: autoqa
-        run: |
-          # Create a custom version of autoqa.py with the input parameters
-          cat > run_agent.py << 'EOF'
-          import asyncio
-          from agents import Agent, ComputerTool, ModelSettings, Runner
-          import os
-          from dotenv import load_dotenv
-
-          from computers.vnc import VNCComputer
-
-          load_dotenv()
-
-          OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
-          if not OPENAI_API_KEY:
-              print("Error: OPENAI_API_KEY not found in environment variables")
-              exit(1)
-
-          VNC_HOST = os.getenv("VNC_HOST")
-          VNC_PORT = os.getenv("VNC_PORT")
-          VNC_PASSWORD = os.getenv("VNC_PASSWORD")
-          PROMPT = os.getenv("PROMPT", "Open firefox and go to mitchellhynes.com")
-          MAX_TURNS = int(os.getenv("MAX_TURNS", "100"))
-          MODEL = os.getenv("OPENAI_MODEL", "computer-use-preview")
-
-          print(f"Running with: VNC_HOST={VNC_HOST}, VNC_PORT={VNC_PORT}")
-          print(f"Prompt: {PROMPT}")
-          print(f"Max turns: {MAX_TURNS}")
-          print(f"Model: {MODEL}")
-
-          computer = VNCComputer(
-              host=VNC_HOST if VNC_HOST is not None else "localhost",
-              username="ubuntu",
-              port=int(VNC_PORT) if VNC_PORT is not None else 5900,
-              password=VNC_PASSWORD
-          )
-
-          qa_agent = Agent(
-              model=MODEL,
-              model_settings=ModelSettings(
-                  truncation="auto",
-                  reasoning={"summary": "auto"},
-              ),
-              name="Computer User",
-              instructions="""You are a helpful assistant that can control a computer.
-              You have access to a virtual machine running Ubuntu.
-              You can take screenshots, click, type, scroll, and perform other computer operations.
-              When asked to perform tasks, use the computer tool to interact with the GUI environment.
-              You have full access to the computer, including the ability to install packages.
-              Explain what you're doing as you complete tasks.""",
-              tools=[ComputerTool(computer)],
-          )
-
-
-          async def main():
-              print("Initializing QA Agent...")
-
-              result = Runner.run_streamed(
-                  qa_agent,
-                  PROMPT,
-                  max_turns=MAX_TURNS,
-              )
-
-              async for event in result.stream_events():
-                  if hasattr(event, "type"):
-                      event_type = event.type
-
-                      if event_type == "raw_response_event":
-                          data = event.data
-                          if hasattr(data, "type"):
-                              if data.type == "response.reasoning_summary_text.done" and hasattr(
-                                  data, "text"
-                              ):
-                                  print(f"🧠 Agent reasoning: {data.text}")
-
-              print(f"Response: {result.final_output}")
-
-
-          if __name__ == "__main__":
-              print("Starting AutoQA...")
-              asyncio.run(main())
-
-          print("Done")
-          EOF
-
       - name: Run AutoQA Agent
         env:
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
@@ -137,10 +38,16 @@ jobs:
           MAX_TURNS: ${{ github.event.inputs.max_turns || '100' }}
         working-directory: autoqa
         run: |
-          python run_agent.py
+          python autoqa.py
 
       - name: Save screenshots
         if: always()
         run: |
           mkdir -p artifacts
           cp -f screenshot_*.png artifacts/ 2>/dev/null || true
+
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v3
+        with:
+          name: screenshots
+          path: artifacts
