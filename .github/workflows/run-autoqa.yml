@@ -38,7 +38,7 @@ jobs:
           MAX_TURNS: ${{ github.event.inputs.max_turns || '100' }}
         working-directory: autoqa
         run: |
-          python autoqa.py
+          python workflow-entry-point.py
 
       - name: Save screenshots
         if: always()
