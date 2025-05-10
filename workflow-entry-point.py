@@ -3,7 +3,7 @@ from agents import Runner
 import os
 from computer_use_agent import computer_use_agent
 
-MAX_TURNS = os.environ.get("MAX_TURNS", 100)
+MAX_TURNS = int(os.environ.get("MAX_TURNS", 100))
 PROMPT = os.environ.get("PROMPT")
 
 if PROMPT is None:
