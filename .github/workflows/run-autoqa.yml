@@ -36,7 +36,6 @@ jobs:
           OPENAI_MODEL: ${{ env.OPENAI_MODEL }}
           PROMPT: ${{ github.event.inputs.prompt || 'Open firefox and go to mitchellhynes.com' }}
           MAX_TURNS: ${{ github.event.inputs.max_turns || '100' }}
-        working-directory: autoqa
         run: |
           python workflow-entry-point.py
 
