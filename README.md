@@ -4,10 +4,29 @@ A tool that uses OpenAI Agents to control a virtual Ubuntu environment and perfo
 
 ## GitHub Actions
 
-This project includes a GitHub Actions workflow that automatically runs the AutoQA agent in a containerized environment. The workflow can be:
+This project includes GitHub Actions workflows that automatically run the AutoQA agent in a containerized environment:
 
+### Standard Workflow
+
+The standard workflow can be:
 - Triggered manually through the GitHub Actions UI
 - Scheduled to run daily at midnight UTC
+
+### Reusable Workflow
+
+The project also provides a **reusable workflow** that can be easily integrated into other repositories:
+
+```yaml
+jobs:
+  run-autoqa:
+    uses: yourusername/autoqa/.github/workflows/reusable-autoqa.yml@main
+    with:
+      prompt: "Open firefox and go to your-website.com"
+    secrets:
+      OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+```
+
+See `.github/workflows/README.md` for comprehensive documentation on using the reusable workflow.
 
 ### Manual Trigger Options
 
@@ -83,7 +102,9 @@ python autoqa.py
 
 ## GitHub Actions
 
-To run this workflow in your own repository:
+### Using the Standard Workflow
+
+To run the standard workflow in your own repository:
 
 1. Fork this repository
 2. Add your `OPENAI_API_KEY` to your repository secrets
@@ -92,4 +113,33 @@ To run this workflow in your own repository:
 5. Click "Run workflow" and optionally customize the parameters
 6. View the workflow logs and download screenshots from the artifacts section
 
-You can also customize the schedule or other parameters by editing the `.github/workflows/run-autoqa.yml` file.
+You can customize the schedule or other parameters by editing the `.github/workflows/run-autoqa.yml` file.
+
+### Using the Reusable Workflow
+
+To integrate the reusable workflow into your existing repository:
+
+1. Create a new workflow file in your repository (e.g., `.github/workflows/autoqa.yml`)
+2. Reference the reusable workflow from this repository
+3. Configure inputs and secrets as needed
+
+Example:
+```yaml
+name: AutoQA Tests
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: '0 0 * * 1'  # Run every Monday at midnight
+
+jobs:
+  run-tests:
+    uses: yourusername/autoqa/.github/workflows/reusable-autoqa.yml@main
+    with:
+      prompt: "Open firefox and navigate to your-website.com"
+      max_turns: "150"
+    secrets:
+      OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+```
+
+For detailed instructions and advanced configuration options, see the workflow documentation in `.github/workflows/README.md`.

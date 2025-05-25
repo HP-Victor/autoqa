@@ -1,0 +1,100 @@
+name: Reusable AutoQA Workflow
+
+on:
+  workflow_call:
+    inputs:
+      prompt:
+        description: 'Custom prompt for the AutoQA agent'
+        required: false
+        type: string
+        default: 'Open firefox and go to mitchellhynes.com'
+      max_turns:
+        description: 'Maximum number of turns for the agent'
+        required: false
+        type: string
+        default: '100'
+      python_version:
+        description: 'Python version to use'
+        required: false
+        type: string
+        default: '3.10'
+      openai_model:
+        description: 'OpenAI model to use for the agent'
+        required: false
+        type: string
+        default: 'computer-use-preview'
+    secrets:
+      OPENAI_API_KEY:
+        required: true
+      VNC_HOST:
+        required: false
+      VNC_PORT:
+        required: false
+      VNC_PASSWORD:
+        required: false
+
+jobs:
+  run-autoqa:
+    runs-on: ubuntu-latest
+    env:
+      VNC_HOST: ${{ secrets.VNC_HOST || 'localhost' }}
+      VNC_PORT: ${{ secrets.VNC_PORT || '5900' }}
+      VNC_PASSWORD: ${{ secrets.VNC_PASSWORD || 'secret' }}
+      OPENAI_MODEL: ${{ inputs.openai_model }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: ${{ inputs.python_version }}
+          cache: "pip"
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r autoqa/requirements.txt
+
+      - name: Set up Docker
+        uses: docker/setup-buildx-action@v2
+
+      - name: Start VNC container
+        working-directory: autoqa/docker
+        run: |
+          docker compose -f compose.yml up -d
+          # Give the container time to initialize
+          sleep 10
+
+      - name: Run AutoQA Agent
+        env:
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+          VNC_HOST: ${{ env.VNC_HOST }}
+          VNC_PORT: ${{ env.VNC_PORT }}
+          VNC_PASSWORD: ${{ env.VNC_PASSWORD }}
+          OPENAI_MODEL: ${{ env.OPENAI_MODEL }}
+          PROMPT: ${{ inputs.prompt }}
+          MAX_TURNS: ${{ inputs.max_turns }}
+        working-directory: autoqa
+        run: |
+          python workflow-entry-point.py
+
+      - name: Save screenshots
+        if: always()
+        run: |
+          mkdir -p artifacts
+          cp -f screenshot_*.png artifacts/ 2>/dev/null || true
+
+      - name: Upload artifacts
+        if: always()
+        uses: actions/upload-artifact@v3
+        with:
+          name: screenshots
+          path: artifacts
+          retention-days: 7
+
+      - name: Cleanup Docker containers
+        if: always()
+        working-directory: autoqa/docker
+        run: |
+          docker compose -f compose.yml down

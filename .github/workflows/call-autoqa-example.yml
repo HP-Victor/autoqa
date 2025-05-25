@@ -1,0 +1,26 @@
+name: Run AutoQA Example
+
+on:
+  workflow_dispatch:
+    inputs:
+      prompt:
+        description: 'Custom prompt for the AutoQA agent'
+        required: false
+        type: string
+        default: 'Open firefox and go to github.com'
+      max_turns:
+        description: 'Maximum number of turns for the agent'
+        required: false
+        type: string
+        default: '100'
+
+jobs:
+  call-autoqa:
+    uses: ./.github/workflows/reusable-autoqa.yml
+    with:
+      prompt: ${{ github.event.inputs.prompt }}
+      max_turns: ${{ github.event.inputs.max_turns }}
+      python_version: '3.10'
+      openai_model: 'computer-use-preview'
+    secrets:
+      OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}

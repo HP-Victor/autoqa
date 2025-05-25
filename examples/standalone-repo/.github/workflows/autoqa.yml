@@ -1,0 +1,35 @@
+name: AutoQA Integration Example
+
+on:
+  workflow_dispatch:
+    inputs:
+      prompt:
+        description: 'Custom prompt for the AutoQA agent'
+        required: false
+        type: string
+        default: 'Open firefox and search for "GitHub Actions"'
+      max_turns:
+        description: 'Maximum number of turns for the agent'
+        required: false
+        type: string
+        default: '100'
+  schedule:
+    # Run weekly on Monday at 8am
+    - cron: '0 8 * * 1'
+
+jobs:
+  run-autoqa:
+    # Reference the reusable workflow from the AutoQA repository
+    uses: username/autoqa/.github/workflows/reusable-autoqa.yml@main
+    with:
+      prompt: ${{ github.event.inputs.prompt }}
+      max_turns: ${{ github.event.inputs.max_turns }}
+      python_version: '3.10'
+      openai_model: 'computer-use-preview'
+    secrets:
+      # Pass through your repository secrets to the reusable workflow
+      OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+      # Optional VNC configuration (uses defaults if not provided)
+      # VNC_HOST: ${{ secrets.VNC_HOST }}
+      # VNC_PORT: ${{ secrets.VNC_PORT }}
+      # VNC_PASSWORD: ${{ secrets.VNC_PASSWORD }}
