@@ -15,6 +15,7 @@ if not OPENAI_API_KEY:
 VNC_HOST = os.getenv("VNC_HOST")
 VNC_PORT = os.getenv("VNC_PORT")
 VNC_PASSWORD = os.getenv("VNC_PASSWORD")
+OPENAI_MODEL = os.getenv("OPENAI_MODEL", "gpt-4o-mini")
 
 if not VNC_HOST:
     print("Warning: VNC_HOST not found in environment variables")
@@ -22,6 +23,8 @@ if not VNC_PORT:
     print("Warning: VNC_PORT not found in environment variables")
 if not VNC_PASSWORD:
     print("Warning: VNC_PASSWORD not found in environment variables")
+
+print(f"Using OpenAI model: {OPENAI_MODEL}")
 
 computer = VNCComputer(
     host=VNC_HOST if VNC_HOST is not None else "localhost",
@@ -31,7 +34,7 @@ computer = VNCComputer(
 )
 
 computer_use_agent = Agent(
-    model="computer-use-preview",
+    model=OPENAI_MODEL,
     model_settings=ModelSettings(
         truncation="auto",
         reasoning={"summary": "auto"},
