@@ -22,7 +22,7 @@ on:
         description: 'OpenAI model to use for the agent'
         required: false
         type: string
-        default: 'gpt-4o-mini'
+        default: 'gpt-4o'
     secrets:
       OPENAI_API_KEY:
         required: true

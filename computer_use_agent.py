@@ -17,6 +17,9 @@ VNC_PORT = os.getenv("VNC_PORT")
 VNC_PASSWORD = os.getenv("VNC_PASSWORD")
 OPENAI_MODEL = os.getenv("OPENAI_MODEL", "gpt-4o-mini")
 
+# Modelos que soportan computer use
+COMPUTER_USE_MODELS = ['gpt-4o', 'gpt-4o-2024-08-06', 'gpt-4o-2024-11-20']
+
 if not VNC_HOST:
     print("Warning: VNC_HOST not found in environment variables")
 if not VNC_PORT:
@@ -25,6 +28,13 @@ if not VNC_PASSWORD:
     print("Warning: VNC_PASSWORD not found in environment variables")
 
 print(f"Using OpenAI model: {OPENAI_MODEL}")
+
+# Validar si el modelo soporta computer use
+if OPENAI_MODEL not in COMPUTER_USE_MODELS:
+    print(f"❌ ERROR: Model '{OPENAI_MODEL}' does not support computer use tools.")
+    print(f"✅ Supported models: {', '.join(COMPUTER_USE_MODELS)}")
+    print("💡 Please use 'gpt-4o' or upgrade your OpenAI plan to access computer use features.")
+    raise ValueError(f"Model '{OPENAI_MODEL}' does not support computer use tools. Use gpt-4o instead.")
 
 computer = VNCComputer(
     host=VNC_HOST if VNC_HOST is not None else "localhost",
