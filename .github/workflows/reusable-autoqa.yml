@@ -42,8 +42,16 @@ jobs:
       VNC_PASSWORD: ${{ secrets.VNC_PASSWORD || 'secret' }}
       OPENAI_MODEL: ${{ inputs.openai_model }}
     steps:
-      - name: Checkout repository
+      - name: Checkout AutoQA repository
         uses: actions/checkout@v4
+        with:
+          repository: HP-Victor/autoqa
+          path: autoqa
+
+      - name: List repository contents
+        working-directory: autoqa
+        run: |
+          ls -a
 
       - name: Set up Python
         uses: actions/setup-python@v4
@@ -52,6 +60,7 @@ jobs:
           cache: "pip"
 
       - name: Install dependencies
+        working-directory: autoqa
         run: |
           python -m pip install --upgrade pip
           pip install -r requirements.txt
@@ -60,6 +69,7 @@ jobs:
         uses: docker/setup-buildx-action@v2
 
       - name: Start VNC container
+        working-directory: autoqa/docker
         run: |
           pwd
           ls -a
@@ -68,6 +78,7 @@ jobs:
           sleep 10
 
       - name: Run AutoQA Agent
+        working-directory: autoqa
         env:
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
           VNC_HOST: ${{ env.VNC_HOST }}
@@ -76,12 +87,12 @@ jobs:
           OPENAI_MODEL: ${{ env.OPENAI_MODEL }}
           PROMPT: ${{ inputs.prompt }}
           MAX_TURNS: ${{ inputs.max_turns }}
-        working-directory: 
         run: |
           python workflow-entry-point.py
 
       - name: Save screenshots
         if: always()
+        working-directory: autoqa
         run: |
           mkdir -p artifacts
           cp -f screenshot_*.png artifacts/ 2>/dev/null || true
@@ -91,11 +102,11 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: screenshots
-          path: artifacts
+          path: autoqa/artifacts
           retention-days: 7
 
       - name: Cleanup Docker containers
         if: always()
-        working-directory: docker
+        working-directory: autoqa/docker
         run: |
           docker compose -f compose.yml down
