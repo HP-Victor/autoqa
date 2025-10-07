@@ -62,6 +62,8 @@ jobs:
       - name: Start VNC container
         working-directory: docker
         run: |
+          pwd
+          la -a
           docker compose -f compose.yml up -d
           # Give the container time to initialize
           sleep 10
