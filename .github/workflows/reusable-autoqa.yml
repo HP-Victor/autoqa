@@ -60,7 +60,7 @@ jobs:
         uses: docker/setup-buildx-action@v2
 
       - name: Start VNC container
-        working-directory: autoqa/docker
+        working-directory: docker
         run: |
           docker compose -f compose.yml up -d
           # Give the container time to initialize
@@ -75,7 +75,7 @@ jobs:
           OPENAI_MODEL: ${{ env.OPENAI_MODEL }}
           PROMPT: ${{ inputs.prompt }}
           MAX_TURNS: ${{ inputs.max_turns }}
-        working-directory: autoqa
+        working-directory: 
         run: |
           python workflow-entry-point.py
 
@@ -95,6 +95,6 @@ jobs:
 
       - name: Cleanup Docker containers
         if: always()
-        working-directory: autoqa/docker
+        working-directory: docker
         run: |
           docker compose -f compose.yml down
