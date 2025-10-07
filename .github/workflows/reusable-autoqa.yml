@@ -19,13 +19,15 @@ on:
         type: string
         default: '3.10'
       openai_model:
-        description: 'OpenAI model to use for the agent (gpt-5-pro, gpt-5, gpt-4o)'
+        description: 'OpenAI model (if using OpenAI - not recommended for computer use)'
         required: false
         type: string
-        default: 'gpt-5-pro'
+        default: 'gpt-4o'
     secrets:
+      ANTHROPIC_API_KEY:
+        required: false
       OPENAI_API_KEY:
-        required: true
+        required: false
       VNC_HOST:
         required: false
       VNC_PORT:
@@ -80,6 +82,7 @@ jobs:
       - name: Run AutoQA Agent
         working-directory: autoqa
         env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
           VNC_HOST: ${{ env.VNC_HOST }}
           VNC_PORT: ${{ env.VNC_PORT }}
@@ -88,6 +91,12 @@ jobs:
           PROMPT: ${{ inputs.prompt }}
           MAX_TURNS: ${{ inputs.max_turns }}
         run: |
+          echo "🔍 Available API Keys:"
+          echo "ANTHROPIC_API_KEY: $(if [ -n "$ANTHROPIC_API_KEY" ]; then echo "✅ SET"; else echo "❌ NOT SET"; fi)"
+          echo "OPENAI_API_KEY: $(if [ -n "$OPENAI_API_KEY" ]; then echo "✅ SET"; else echo "❌ NOT SET"; fi)"
+          echo ""
+          echo "💡 Recommendation: Use ANTHROPIC_API_KEY for computer use functionality"
+          echo ""
           python workflow-entry-point.py
 
       - name: Save screenshots
