@@ -15,7 +15,7 @@ if not OPENAI_API_KEY:
 VNC_HOST = os.getenv("VNC_HOST")
 VNC_PORT = os.getenv("VNC_PORT")
 VNC_PASSWORD = os.getenv("VNC_PASSWORD")
-OPENAI_MODEL = os.getenv("OPENAI_MODEL", "gpt-4o-mini")
+OPENAI_MODEL = os.getenv("OPENAI_MODEL", "gpt-4o")
 
 # Modelos que soportan computer use
 COMPUTER_USE_MODELS = ['gpt-4o', 'gpt-4o-2024-08-06', 'gpt-4o-2024-11-20']
@@ -34,6 +34,8 @@ if OPENAI_MODEL not in COMPUTER_USE_MODELS:
     print(f"❌ ERROR: Model '{OPENAI_MODEL}' does not support computer use tools.")
     print(f"✅ Supported models: {', '.join(COMPUTER_USE_MODELS)}")
     print("💡 Please use 'gpt-4o' or upgrade your OpenAI plan to access computer use features.")
+    print(f"🔄 Original ecumene/autoqa probably used an older OpenAI API version.")
+    print(f"📅 Current OpenAI policy (2024-2025) restricts computer use to premium models only.")
     raise ValueError(f"Model '{OPENAI_MODEL}' does not support computer use tools. Use gpt-4o instead.")
 
 computer = VNCComputer(
