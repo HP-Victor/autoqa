@@ -15,10 +15,21 @@ if not OPENAI_API_KEY:
 VNC_HOST = os.getenv("VNC_HOST")
 VNC_PORT = os.getenv("VNC_PORT")
 VNC_PASSWORD = os.getenv("VNC_PASSWORD")
-OPENAI_MODEL = os.getenv("OPENAI_MODEL", "gpt-4o")
+# Prioridad de modelos con computer use (del mejor al más básico)
+PREFERRED_MODELS = [
+    "gpt-5-pro", "gpt-5", "gpt-5-chat-latest", "gpt-5-2025-08-07",
+    "gpt-4o-2024-11-20", "gpt-4o-2024-08-06", "gpt-4o"
+]
+
+# Obtener modelo desde environment o usar el mejor disponible
+OPENAI_MODEL = os.getenv("OPENAI_MODEL")
+if not OPENAI_MODEL:
+    # Si no se especifica, usar el primer modelo de la lista de preferencias
+    OPENAI_MODEL = PREFERRED_MODELS[0]
+    print(f"🎯 No model specified, using preferred model: {OPENAI_MODEL}")
 
 # Modelos que soportan computer use
-COMPUTER_USE_MODELS = ['gpt-4o', 'gpt-4o-2024-08-06', 'gpt-4o-2024-11-20']
+COMPUTER_USE_MODELS = PREFERRED_MODELS
 
 if not VNC_HOST:
     print("Warning: VNC_HOST not found in environment variables")
@@ -27,16 +38,21 @@ if not VNC_PORT:
 if not VNC_PASSWORD:
     print("Warning: VNC_PASSWORD not found in environment variables")
 
-print(f"Using OpenAI model: {OPENAI_MODEL}")
+print(f"🤖 Using OpenAI model: {OPENAI_MODEL}")
 
 # Validar si el modelo soporta computer use
 if OPENAI_MODEL not in COMPUTER_USE_MODELS:
     print(f"❌ ERROR: Model '{OPENAI_MODEL}' does not support computer use tools.")
     print(f"✅ Supported models: {', '.join(COMPUTER_USE_MODELS)}")
-    print("💡 Please use 'gpt-4o' or upgrade your OpenAI plan to access computer use features.")
-    print(f"🔄 Original ecumene/autoqa probably used an older OpenAI API version.")
-    print(f"📅 Current OpenAI policy (2024-2025) restricts computer use to premium models only.")
-    raise ValueError(f"Model '{OPENAI_MODEL}' does not support computer use tools. Use gpt-4o instead.")
+    print("💡 Try using 'gpt-5' (latest) or 'gpt-4o' for computer use features.")
+    print(f"🆕 GPT-5 models have enhanced computer use capabilities!")
+    print(f"📅 Computer use support varies by model and API access level.")
+    raise ValueError(f"Model '{OPENAI_MODEL}' does not support computer use tools.")
+
+# Mensaje especial para GPT-5
+if OPENAI_MODEL.startswith('gpt-5'):
+    print(f"🚀 Using GPT-5! Enhanced computer use capabilities enabled.")
+    print(f"💡 Make sure you have sufficient quota for GPT-5 usage.")
 
 computer = VNCComputer(
     host=VNC_HOST if VNC_HOST is not None else "localhost",

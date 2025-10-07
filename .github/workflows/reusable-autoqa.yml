@@ -19,10 +19,10 @@ on:
         type: string
         default: '3.10'
       openai_model:
-        description: 'OpenAI model to use for the agent'
+        description: 'OpenAI model to use for the agent (gpt-5-pro, gpt-5, gpt-4o)'
         required: false
         type: string
-        default: 'gpt-4o'
+        default: 'gpt-5-pro'
     secrets:
       OPENAI_API_KEY:
         required: true
