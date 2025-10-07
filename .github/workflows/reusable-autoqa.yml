@@ -60,7 +60,6 @@ jobs:
         uses: docker/setup-buildx-action@v2
 
       - name: Start VNC container
-        working-directory: docker
         run: |
           pwd
           la -a
