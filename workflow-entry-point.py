@@ -28,7 +28,7 @@ agent = Agent(
 
 # Ejecutar agente
 async def main():
-    result = Runner.run_streamed(agent, PROMPT, max_turns=MAX_TURNS)
+    result = Runner.run_streamed(agent, PROMPT, max_turns=MAX_TURNS,stream=False)
 
     async for event in result.stream_events():
         if hasattr(event, "type") and event.type == "raw_response_event":
