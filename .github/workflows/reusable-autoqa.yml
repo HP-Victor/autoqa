@@ -4,10 +4,9 @@ on:
   workflow_call:
     inputs:
       prompt:
-        description: 'Custom prompt for the AutoQA agent'
-        required: false
+        description: 'Custom prompt for the AutoQA agent (context + task)'
+        required: true
         type: string
-        default: 'Open firefox and go to mitchellhynes.com'
       max_turns:
         description: 'Maximum number of turns for the agent'
         required: false
@@ -18,42 +17,30 @@ on:
         required: false
         type: string
         default: '3.10'
-      openai_model:
-        description: 'OpenAI model (if using OpenAI - not recommended for computer use)'
+      model:
+        description: 'Model to use for agent (gpt-5-pro / claude-3-5-sonnet-20241022)'
         required: false
         type: string
-        default: 'gpt-4o'
+        default: 'gpt-5-pro'
     secrets:
-      ANTHROPIC_API_KEY:
-        required: false
       OPENAI_API_KEY:
         required: false
-      VNC_HOST:
-        required: false
-      VNC_PORT:
-        required: false
-      VNC_PASSWORD:
+      ANTHROPIC_API_KEY:
         required: false
 
 jobs:
   run-autoqa:
     runs-on: ubuntu-latest
     env:
-      VNC_HOST: ${{ secrets.VNC_HOST || 'localhost' }}
-      VNC_PORT: ${{ secrets.VNC_PORT || '5900' }}
-      VNC_PASSWORD: ${{ secrets.VNC_PASSWORD || 'secret' }}
-      OPENAI_MODEL: ${{ inputs.openai_model }}
+      OPENAI_MODEL: ${{ inputs.model }}
+      OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+      ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
     steps:
       - name: Checkout AutoQA repository
         uses: actions/checkout@v4
         with:
           repository: HP-Victor/autoqa
           path: autoqa
-
-      - name: List repository contents
-        working-directory: autoqa
-        run: |
-          ls -a
 
       - name: Set up Python
         uses: actions/setup-python@v4
@@ -67,55 +54,18 @@ jobs:
           python -m pip install --upgrade pip
           pip install -r requirements.txt
 
-      - name: Set up Docker
-        uses: docker/setup-buildx-action@v2
-
-      - name: Start VNC container
-        working-directory: autoqa/docker
-        run: |
-          pwd
-          ls -a
-          docker compose -f compose.yml up -d
-          # Give the container time to initialize
-          sleep 10
-
       - name: Run AutoQA Agent
         working-directory: autoqa
         env:
-          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
-          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
-          VNC_HOST: ${{ env.VNC_HOST }}
-          VNC_PORT: ${{ env.VNC_PORT }}
-          VNC_PASSWORD: ${{ env.VNC_PASSWORD }}
-          OPENAI_MODEL: ${{ env.OPENAI_MODEL }}
           PROMPT: ${{ inputs.prompt }}
           MAX_TURNS: ${{ inputs.max_turns }}
         run: |
-          echo "🔍 Available API Keys:"
-          echo "ANTHROPIC_API_KEY: $(if [ -n "$ANTHROPIC_API_KEY" ]; then echo "✅ SET"; else echo "❌ NOT SET"; fi)"
-          echo "OPENAI_API_KEY: $(if [ -n "$OPENAI_API_KEY" ]; then echo "✅ SET"; else echo "❌ NOT SET"; fi)"
-          echo ""
-          echo "💡 Recommendation: Use ANTHROPIC_API_KEY for computer use functionality"
-          echo ""
           python workflow-entry-point.py
 
-      - name: Save screenshots
-        if: always()
-        working-directory: autoqa
-        run: |
-          mkdir -p artifacts
-          cp -f screenshot_*.png artifacts/ 2>/dev/null || true
-
-      - name: Upload artifacts
+      - name: Upload generated code artifacts
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: screenshots
-          path: autoqa/artifacts
+          name: autoqa-generated-code
+          path: autoqa/generated_code/
           retention-days: 7
-
-      - name: Cleanup Docker containers
-        if: always()
-        working-directory: autoqa/docker
-        run: |
-          docker compose -f compose.yml down
