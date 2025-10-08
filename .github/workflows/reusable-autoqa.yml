@@ -22,21 +22,21 @@ on:
         required: false
         type: string
         default: 'gpt-5-pro'
-      target_project_path:
-        description: 'Path to target project directory (relative to autoqa working directory)'
+      target_repo:
+        description: 'Target repository to clone (format: owner/repo)'
         required: false
         type: string
-        default: '../template-models'
-      framework_lib_paths:
-        description: 'Comma-separated paths to framework libraries (relative to autoqa working directory)'
+        default: 'HP-Victor/template-models'
+      framework_repos:
+        description: 'Comma-separated framework repositories to clone (format: owner/repo,owner/repo)'
         required: false
         type: string
-        default: '../selenium-driver-lib,../selenium-commons-lib'
-      additional_project_paths:
-        description: 'Comma-separated paths to additional reference projects for context (relative to autoqa working directory)'
+        default: 'HP-Victor/selenium-driver-lib,HP-Victor/selenium-commons-lib'
+      additional_repos:
+        description: 'Comma-separated additional repositories for context (format: owner/repo,owner/repo)'
         required: false
         type: string
-        default: '../central-repo'
+        default: 'HP-Victor/central-repo'
     secrets:
       OPENAI_API_KEY:
         required: false
@@ -50,14 +50,38 @@ jobs:
       OPENAI_MODEL: ${{ inputs.model }}
       OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
       ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
-      FRAMEWORK_LIB_PATHS: ${{ inputs.framework_lib_paths }}
-      ADDITIONAL_PROJECT_PATHS: ${{ inputs.additional_project_paths }}
+      FRAMEWORK_LIB_PATHS: '../selenium-driver-lib,../selenium-commons-lib'
+      ADDITIONAL_PROJECT_PATHS: '../central-repo'
     steps:
       - name: Checkout AutoQA repository
         uses: actions/checkout@v4
         with:
           repository: HP-Victor/autoqa
           path: autoqa
+
+      - name: Checkout target repository
+        uses: actions/checkout@v4
+        with:
+          repository: ${{ inputs.target_repo }}
+          path: template-models
+
+      - name: Checkout framework repositories
+        run: |
+          IFS=',' read -ra REPOS <<< "${{ inputs.framework_repos }}"
+          for repo in "${REPOS[@]}"; do
+            repo_name=$(basename "$repo")
+            echo "📦 Cloning framework: $repo as $repo_name"
+            git clone https://github.com/$repo.git $repo_name
+          done
+
+      - name: Checkout additional repositories
+        run: |
+          IFS=',' read -ra REPOS <<< "${{ inputs.additional_repos }}"
+          for repo in "${REPOS[@]}"; do
+            repo_name=$(basename "$repo")
+            echo "📦 Cloning additional repo: $repo as $repo_name"
+            git clone https://github.com/$repo.git $repo_name
+          done
 
       - name: Set up Python
         uses: actions/setup-python@v4
@@ -86,7 +110,7 @@ jobs:
         env:
           PROMPT: ${{ inputs.prompt }}
           MAX_TURNS: ${{ inputs.max_turns }}
-          TARGET_PROJECT_PATH: ${{ inputs.target_project_path || '../template-models' }}
+          TARGET_PROJECT_PATH: '../template-models'
           GITHUB_RUN_ID: ${{ github.run_id }}
         run: |
           python workflow-entry-point.py
