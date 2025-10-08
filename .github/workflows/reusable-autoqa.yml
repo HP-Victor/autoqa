@@ -63,6 +63,7 @@ jobs:
         uses: actions/checkout@v4
         with:
           repository: HP-Victor/autoqa
+          ref: feature/version_estable
           path: autoqa
 
       - name: Checkout target repository
