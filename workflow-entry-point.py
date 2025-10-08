@@ -602,8 +602,13 @@ agent = Agent(
 async def main():
     print("🚀 Iniciando AutoQA con capacidades de auto-reflexión...")
     
-    # Usar directamente el PROMPT de la variable de entorno
-    # No añadir más instrucciones aquí - ya están en las instructions del agente
+    # IMPORTANTE: El agente ya fue configurado con final_instructions que incluye:
+    # - PROMPT (tarea del usuario)
+    # - enhanced_prompt (PROMPT + contexto completo del framework) 
+    # - auto_reflection_instructions (capacidades de auto-reflexión)
+    # 
+    # En runner.run_streamed() pasamos PROMPT como la tarea/mensaje del usuario
+    # El agente usará sus instructions (final_instructions) para procesarlo
     runner = Runner()
     
     reflection_count = 0
@@ -611,6 +616,7 @@ async def main():
     validation_count = 0
     
     print("📊 Monitoreando proceso de auto-reflexión...")
+    print(f"📋 Tarea del usuario: {PROMPT[:100]}..." if len(PROMPT) > 100 else f"📋 Tarea del usuario: {PROMPT}")
     
     async for event in runner.run_streamed(agent, PROMPT, max_turns=MAX_TURNS):
         if hasattr(event, "type"):
