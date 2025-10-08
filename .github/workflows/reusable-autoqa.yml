@@ -70,6 +70,16 @@ jobs:
         run: |
           python -m pip install --upgrade pip
           pip install -r requirements.txt
+      
+      - name: Control
+        run: |
+          echo "🗂️  Directorio de trabajo actual: $(pwd)"
+          echo "📁  Archivos en el directorio:"
+          ls -la
+          cd ..
+          echo "Volvemos al directorio $(pwd)"
+          echo "Tenemos"
+          ls -a
 
       - name: Run AutoQA Agent
         working-directory: autoqa
@@ -79,7 +89,6 @@ jobs:
           TARGET_PROJECT_PATH: ${{ inputs.target_project_path || '../template-models' }}
           GITHUB_RUN_ID: ${{ github.run_id }}
         run: |
-          cd ..
           python workflow-entry-point.py
 
       - name: Upload modified target repository

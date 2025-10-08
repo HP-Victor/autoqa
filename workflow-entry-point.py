@@ -192,6 +192,10 @@ def create_context_enhanced_prompt(original_prompt, code_analysis, framework_ana
 
 === CONTEXTO AUTOMÁTICO AGREGADO POR AUTOQA ===
 
+REPOSITORIO OBJETIVO PARA CREAR/EDITAR ARCHIVOS: {target_path}
+=================================================================
+IMPORTANTE: Cuando uses create_java_file() o replace_string_in_file(), las rutas deben comenzar con: {target_path}/
+
 ANÁLISIS DEL PROYECTO OBJETIVO: {target_path}
 ============================================
 
@@ -263,12 +267,69 @@ for project in additional_projects:
 # Crear prompt con contexto del código existente, librerías del framework y proyectos adicionales
 enhanced_prompt = create_context_enhanced_prompt(PROMPT, code_analysis, framework_analysis, TARGET_PROJECT_PATH, additional_projects)
 
-# Crear agente
+# Herramientas del agente para trabajar con archivos
+def create_java_file(file_path: str, content: str) -> str:
+    """Crea un archivo Java en la ruta especificada con el contenido proporcionado"""
+    try:
+        # Crear directorio si no existe
+        directory = os.path.dirname(file_path)
+        os.makedirs(directory, exist_ok=True)
+        
+        # Escribir archivo
+        with open(file_path, 'w', encoding='utf-8') as f:
+            f.write(content)
+        
+        print(f"✅ Archivo Java creado: {file_path}")
+        return f"Archivo creado exitosamente: {file_path}"
+    except Exception as e:
+        error_msg = f"Error creando archivo {file_path}: {e}"
+        print(f"❌ {error_msg}")
+        return error_msg
+
+def read_file(file_path: str) -> str:
+    """Lee el contenido de un archivo"""
+    try:
+        with open(file_path, 'r', encoding='utf-8') as f:
+            content = f.read()
+        print(f"📖 Archivo leído: {file_path}")
+        return content
+    except Exception as e:
+        error_msg = f"Error leyendo archivo {file_path}: {e}"
+        print(f"❌ {error_msg}")
+        return error_msg
+
+def replace_string_in_file(file_path: str, old_string: str, new_string: str) -> str:
+    """Reemplaza una cadena en un archivo existente"""
+    try:
+        # Leer archivo
+        with open(file_path, 'r', encoding='utf-8') as f:
+            content = f.read()
+        
+        # Verificar que el string existe
+        if old_string not in content:
+            return f"Error: La cadena especificada no se encontró en {file_path}"
+        
+        # Reemplazar
+        new_content = content.replace(old_string, new_string)
+        
+        # Escribir archivo modificado
+        with open(file_path, 'w', encoding='utf-8') as f:
+            f.write(new_content)
+        
+        print(f"✏️ Archivo modificado: {file_path}")
+        return f"Reemplazo exitoso en: {file_path}"
+    except Exception as e:
+        error_msg = f"Error modificando archivo {file_path}: {e}"
+        print(f"❌ {error_msg}")
+        return error_msg
+
+# Crear agente con herramientas de archivo
 agent = Agent(
     model=MODEL,
     model_settings=ModelSettings(truncation="auto", reasoning={"summary": "auto"}),
     name="Code Generator and File Editor Agent",
-    instructions=enhanced_prompt
+    instructions=enhanced_prompt,
+    tools=[create_java_file, read_file, replace_string_in_file]
 )
 
 # Función para extraer y crear archivos del código generado
@@ -276,6 +337,11 @@ agent = Agent(
 
 # Ejecutar agente
 async def main():
+    # El enhanced_prompt ya contiene:
+    # 1. El PROMPT original del usuario (con su contexto y tarea)
+    # 2. El contexto de FRAMEWORK_LIB_PATHS 
+    # 3. El contexto de ADDITIONAL_PROJECT_PATHS
+    
     result = Runner.run_streamed(agent, enhanced_prompt, max_turns=MAX_TURNS)
 
     async for event in result.stream_events():
@@ -285,38 +351,7 @@ async def main():
                 print(f"🧠 Agent reasoning: {data.text}")
 
     print(f"📝 Generated code output:\n{result.final_output}")
-    
-    # Trabajar directamente en el repositorio objetivo
-    if os.path.exists(TARGET_PROJECT_PATH):
-        print(f"✅ Agente configurado para trabajar directamente en: {TARGET_PROJECT_PATH}")
-        
-        # Crear resumen de lo generado
-        summary_file = f"{TARGET_PROJECT_PATH}/AutoQA-Generation-Summary.md"
-        with open(summary_file, "w", encoding="utf-8") as f:
-            f.write("# Resumen de Generación AutoQA\n\n")
-            f.write(f"## Configuración\n\n")
-            f.write(f"- **Modelo utilizado**: {MODEL}\n")
-            f.write(f"- **Repositorio objetivo**: {TARGET_PROJECT_PATH}\n")
-            f.write(f"- **Fecha de generación**: {os.environ.get('GITHUB_RUN_ID', 'Local')}\n\n")
-            f.write(f"## Análisis Previo\n\n")
-            f.write(f"### Código Existente en el Proyecto:\n")
-            f.write(f"- Page Objects existentes: {len(code_analysis['page_objects'])}\n")
-            f.write(f"- Tests existentes: {len(code_analysis['test_classes'])}\n")
-            f.write(f"- Utilidades existentes: {len(code_analysis['utilities'])}\n\n")
-            f.write(f"### Librerías del Framework Analizadas:\n")
-            for lib in framework_analysis['libraries']:
-                f.write(f"- Clases en {lib['name']}: {len(lib['classes'])}\n")
-            f.write(f"\n### Proyectos Adicionales de Referencia:\n")
-            for project in additional_projects:
-                f.write(f"- {project['name']}: {len(project['files'])} archivos\n")
-            f.write(f"\n## Output Completo del Agente\n\n")
-            f.write(f"```\n{result.final_output}\n```\n")
-        
-        print(f"📋 Resumen guardado en: {summary_file}")
-        print(f"📁 El agente debe haber creado los archivos Java directamente en el repositorio")
-    else:
-        print(f"❌ No se encontró el directorio objetivo: {TARGET_PROJECT_PATH}")
-        print("   El agente no pudo trabajar directamente en el repositorio.")
+    print(f"✅ Ejecución completada. Los archivos fueron creados en: {TARGET_PROJECT_PATH}")
 
 if __name__ == "__main__":
     print("Starting AutoQA code generation...")
