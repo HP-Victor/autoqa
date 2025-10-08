@@ -57,8 +57,6 @@ jobs:
       OPENAI_MODEL: ${{ inputs.model }}
       OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
       ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
-      FRAMEWORK_LIB_PATHS: ${{ inputs.framework_repos }}
-      ADDITIONAL_PROJECT_PATHS: ${{ inputs.additional_repos }}
       GH_TOKEN: ${{ secrets.GH_TOKEN }}
     steps:
       - name: Checkout AutoQA repository
@@ -76,21 +74,45 @@ jobs:
 
       - name: Checkout framework repositories
         run: |
+          FRAMEWORK_PATHS=""
           IFS=',' read -ra REPOS <<< "${{ inputs.framework_repos }}"
           for repo in "${REPOS[@]}"; do
             repo_name=$(basename "$repo")
             echo "📦 Cloning framework: $repo as $repo_name"
             git clone https://${{ env.GH_TOKEN }}@github.com/$repo.git $repo_name
+            
+            # Agregar path al listado
+            if [ -z "$FRAMEWORK_PATHS" ]; then
+              FRAMEWORK_PATHS="../$repo_name"
+            else
+              FRAMEWORK_PATHS="$FRAMEWORK_PATHS,../$repo_name"
+            fi
           done
+          
+          # Guardar paths en variable de entorno para el siguiente step
+          echo "FRAMEWORK_LIB_PATHS=$FRAMEWORK_PATHS" >> $GITHUB_ENV
+          echo "✅ Framework paths configurados: $FRAMEWORK_PATHS"
 
       - name: Checkout additional repositories
         run: |
+          ADDITIONAL_PATHS=""
           IFS=',' read -ra REPOS <<< "${{ inputs.additional_repos }}"
           for repo in "${REPOS[@]}"; do
             repo_name=$(basename "$repo")
             echo "📦 Cloning additional repo: $repo as $repo_name"
             git clone https://${{ env.GH_TOKEN }}@github.com/$repo.git $repo_name
+            
+            # Agregar path al listado
+            if [ -z "$ADDITIONAL_PATHS" ]; then
+              ADDITIONAL_PATHS="../$repo_name"
+            else
+              ADDITIONAL_PATHS="$ADDITIONAL_PATHS,../$repo_name"
+            fi
           done
+          
+          # Guardar paths en variable de entorno para el siguiente step
+          echo "ADDITIONAL_PROJECT_PATHS=$ADDITIONAL_PATHS" >> $GITHUB_ENV
+          echo "✅ Additional paths configurados: $ADDITIONAL_PATHS"
 
       - name: Set up Python
         uses: actions/setup-python@v4
@@ -109,10 +131,11 @@ jobs:
           echo "🗂️  Directorio de trabajo actual: $(pwd)"
           echo "📁  Archivos en el directorio:"
           ls -la
-          cd ..
-          echo "Volvemos al directorio $(pwd)"
-          echo "Tenemos"
-          ls -a
+          echo ""
+          echo "🔍 Variables de entorno configuradas:"
+          echo "   FRAMEWORK_LIB_PATHS: $FRAMEWORK_LIB_PATHS"
+          echo "   ADDITIONAL_PROJECT_PATHS: $ADDITIONAL_PROJECT_PATHS"
+          echo "   TARGET_PROJECT_PATH: ../template-models"
 
       - name: Run AutoQA Agent
         working-directory: autoqa
@@ -120,8 +143,14 @@ jobs:
           PROMPT: ${{ inputs.prompt }}
           MAX_TURNS: ${{ inputs.max_turns }}
           TARGET_PROJECT_PATH: '../template-models'
+          FRAMEWORK_LIB_PATHS: ${{ env.FRAMEWORK_LIB_PATHS }}
+          ADDITIONAL_PROJECT_PATHS: ${{ env.ADDITIONAL_PROJECT_PATHS }}
           GITHUB_RUN_ID: ${{ github.run_id }}
         run: |
+          echo "🚀 Iniciando AutoQA Agent con:"
+          echo "   FRAMEWORK_LIB_PATHS: $FRAMEWORK_LIB_PATHS"
+          echo "   ADDITIONAL_PROJECT_PATHS: $ADDITIONAL_PROJECT_PATHS"
+          echo "   TARGET_PROJECT_PATH: $TARGET_PROJECT_PATH"
           python workflow-entry-point.py
 
       - name: Upload modified target repository
