@@ -42,6 +42,9 @@ on:
         required: false
       ANTHROPIC_API_KEY:
         required: false
+      GH_TOKEN:
+        description: 'GitHub token with repo access for private repositories'
+        required: false
 
 jobs:
   run-autoqa:
@@ -50,8 +53,8 @@ jobs:
       OPENAI_MODEL: ${{ inputs.model }}
       OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
       ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
-      FRAMEWORK_LIB_PATHS: '../selenium-driver-lib,../selenium-commons-lib'
-      ADDITIONAL_PROJECT_PATHS: '../central-repo'
+      FRAMEWORK_LIB_PATHS: ${{ inputs.framework_repos }}
+      ADDITIONAL_PROJECT_PATHS: ${{ inputs.additional_repos }}
     steps:
       - name: Checkout AutoQA repository
         uses: actions/checkout@v4
@@ -64,23 +67,28 @@ jobs:
         with:
           repository: ${{ inputs.target_repo }}
           path: template-models
+          token: ${{ secrets.GH_TOKEN || github.token }}
 
       - name: Checkout framework repositories
+        env:
+          GH_TOKEN: ${{ secrets.GH_TOKEN || github.token }}
         run: |
           IFS=',' read -ra REPOS <<< "${{ inputs.framework_repos }}"
           for repo in "${REPOS[@]}"; do
             repo_name=$(basename "$repo")
             echo "📦 Cloning framework: $repo as $repo_name"
-            git clone https://github.com/$repo.git $repo_name
+            git clone https://${GH_TOKEN}@github.com/$repo.git $repo_name
           done
 
       - name: Checkout additional repositories
+        env:
+          GH_TOKEN: ${{ secrets.GH_TOKEN || github.token }}
         run: |
           IFS=',' read -ra REPOS <<< "${{ inputs.additional_repos }}"
           for repo in "${REPOS[@]}"; do
             repo_name=$(basename "$repo")
             echo "📦 Cloning additional repo: $repo as $repo_name"
-            git clone https://github.com/$repo.git $repo_name
+            git clone https://${GH_TOKEN}@github.com/$repo.git $repo_name
           done
 
       - name: Set up Python
