@@ -502,13 +502,60 @@ Análisis crítico:
         print(f"❌ {error_msg}")
         return error_msg
 
-# Configurar modelo con capacidades avanzadas
-model_settings = ModelSettings(
-    truncation="auto", 
-    reasoning={"summary": "auto"},
-    temperature=0.7,  # Más creatividad para auto-reflexión
-    max_tokens=8000   # Mayor capacidad para razonamiento complejo
-)
+# Configurar modelo con capacidades avanzadas según el tipo
+MAX_TOKENS_LIMIT = int(os.environ.get("MAX_TOKENS_LIMIT", 8000))
+print(f"🔧 Límite de tokens configurado: {MAX_TOKENS_LIMIT}")
+
+def is_gpt5_model(model_name):
+    """Detecta si es un modelo GPT-5 (cualquier variante)"""
+    model_lower = model_name.lower()
+    # Detección específica para GPT-5
+    return "gpt-5" in model_lower and not ("gpt-3.5" in model_lower or "gpt-4.5" in model_lower)
+
+def is_claude_model(model_name):
+    """Detecta si es un modelo Claude"""
+    return "claude" in model_name.lower()
+
+def is_standard_gpt_model(model_name):
+    """Detecta modelos GPT estándar (GPT-3.5, GPT-4, GPT-4-turbo, etc.)"""
+    model_lower = model_name.lower()
+    return ("gpt" in model_lower and not is_gpt5_model(model_name)) or "o1" in model_lower
+
+print(f"🔍 Detectando configuración para modelo: {MODEL}")
+
+if is_gpt5_model(MODEL):
+    # GPT-5 soporta reasoning pero NO temperature
+    model_settings = ModelSettings(
+        truncation="auto", 
+        reasoning={"summary": "auto"},
+        max_tokens=MAX_TOKENS_LIMIT
+    )
+    print(f"⚙️ Configuración GPT-5: reasoning activado, sin temperature, max_tokens={MAX_TOKENS_LIMIT}")
+elif is_claude_model(MODEL):
+    # Claude soporta temperature pero NO reasoning
+    model_settings = ModelSettings(
+        truncation="auto",
+        temperature=0.7,
+        max_tokens=MAX_TOKENS_LIMIT
+    )
+    print(f"⚙️ Configuración Claude: temperature=0.7, max_tokens={MAX_TOKENS_LIMIT}")
+elif is_standard_gpt_model(MODEL):
+    # GPT-4, GPT-3.5, GPT-4-turbo, GPT-4o-mini, o1-mini, etc.
+    model_settings = ModelSettings(
+        truncation="auto",
+        temperature=0.7,
+        max_tokens=MAX_TOKENS_LIMIT
+    )
+    print(f"⚙️ Configuración GPT estándar para {MODEL}: temperature=0.7, max_tokens={MAX_TOKENS_LIMIT}")
+else:
+    # Fallback para otros modelos
+    print(f"⚠️  Modelo no reconocido: {MODEL}, usando configuración estándar")
+    model_settings = ModelSettings(
+        truncation="auto",
+        temperature=0.7,
+        max_tokens=MAX_TOKENS_LIMIT
+    )
+    print(f"⚙️ Configuración fallback: temperature=0.7, max_tokens={MAX_TOKENS_LIMIT}")
 
 # Añadir capacidades de auto-reflexión al prompt con contexto
 print("🧠 Configurando agente con capacidades de auto-reflexión")
@@ -556,15 +603,17 @@ agent = Agent(
 async def main():
     print("🚀 Iniciando AutoQA con capacidades de auto-reflexión...")
     
-    # Usar directamente el PROMPT de la variable de entorno
-    # No añadir más instrucciones aquí - ya están en las instructions del agente
-    result = Runner.run_streamed(agent, PROMPT, max_turns=MAX_TURNS)
+    runner = Runner()
     
     reflection_count = 0
     checkpoint_count = 0
     validation_count = 0
     
     print("📊 Monitoreando proceso de auto-reflexión...")
+    print(f"📋 Tarea del usuario: {PROMPT[:100]}..." if len(PROMPT) > 100 else f"📋 Tarea del usuario: {PROMPT}")
+    
+    # Ejecutar streaming correctamente usando runner.run_streamed()
+    result = runner.run_streamed(agent, PROMPT, max_turns=MAX_TURNS)
     
     async for event in result.stream_events():
         if hasattr(event, "type"):
