@@ -25,92 +25,58 @@ else:
         raise ValueError("OpenAI API key required for OpenAI models. Set OPENAI_API_KEY")
     print(f"✅ Using OpenAI model for code generation: {MODEL}")
 
-# Configuración común de tokens
-MAX_TOKENS_LIMIT = int(os.environ.get("MAX_TOKENS_LIMIT", 10000))
-print(f"🔧 Límite de tokens configurado: {MAX_TOKENS_LIMIT}")
-
 # Herramientas para el agente
 
 
 def analyze_existing_code(base_path):
-    """Analiza COMPLETAMENTE el código existente en el repositorio objetivo"""
+    """Analiza el código existente en el repositorio objetivo"""
     analysis = {
         "page_objects": [],
         "test_classes": [],
         "utilities": [],
-        "all_java_files": [],
         "structure": {}
     }
     
     if not os.path.exists(base_path):
         return analysis
     
-    print(f"   🔍 Analizando TODOS los archivos Java en: {base_path}")
+    # Buscar Page Objects existentes
+    page_pattern = f"{base_path}/**/mapfre/paginas/*.java"
+    for file_path in glob.glob(page_pattern, recursive=True):
+        with open(file_path, 'r', encoding='utf-8') as f:
+            content = f.read()
+            analysis["page_objects"].append({
+                "file": file_path,
+                "name": os.path.basename(file_path),
+                "content": content[:500] + "..." if len(content) > 500 else content
+            })
     
-    # Buscar TODOS los archivos Java en el proyecto
-    java_pattern = f"{base_path}/**/*.java"
-    all_java_files = glob.glob(java_pattern, recursive=True)
+    # Buscar Tests existentes
+    test_pattern = f"{base_path}/**/mapfre/casos/*.java"
+    for file_path in glob.glob(test_pattern, recursive=True):
+        with open(file_path, 'r', encoding='utf-8') as f:
+            content = f.read()
+            analysis["test_classes"].append({
+                "file": file_path,
+                "name": os.path.basename(file_path),
+                "content": content[:500] + "..." if len(content) > 500 else content
+            })
     
-    print(f"   📁 Encontrados {len(all_java_files)} archivos Java en total")
-    
-    for file_path in all_java_files:
-        try:
-            with open(file_path, 'r', encoding='utf-8') as f:
-                content = f.read()
-                file_name = os.path.basename(file_path)
-                relative_path = os.path.relpath(file_path, base_path)
-                
-                # Analizar el contenido para extraer métodos y clases importantes
-                methods = extract_methods_from_java(content)
-                class_name = extract_class_name_from_java(content)
-                
-                file_info = {
-                    "file": file_path,
-                    "name": file_name,
-                    "relative_path": relative_path,
-                    "class_name": class_name,
-                    "methods": methods,
-                    "content": content[:1000] + "..." if len(content) > 1000 else content
-                }
-                
-                # Clasificar por tipo/ubicación
-                if "/paginas/" in file_path or "Page" in file_name:
-                    analysis["page_objects"].append(file_info)
-                elif "/casos/" in file_path or "Test" in file_name:
-                    analysis["test_classes"].append(file_info)
-                elif "/utils/" in file_path or "Util" in file_name or "Helper" in file_name:
-                    analysis["utilities"].append(file_info)
-                
-                # Agregar a la lista completa independientemente
-                analysis["all_java_files"].append(file_info)
-                
-        except Exception as e:
-            print(f"      ⚠️  Error leyendo {file_path}: {e}")
-    
-    print(f"   📊 Clasificación encontrada:")
-    print(f"      - Page Objects: {len(analysis['page_objects'])}")
-    print(f"      - Test Classes: {len(analysis['test_classes'])}")  
-    print(f"      - Utilities: {len(analysis['utilities'])}")
-    print(f"      - Otros archivos Java: {len(analysis['all_java_files']) - len(analysis['page_objects']) - len(analysis['test_classes']) - len(analysis['utilities'])}")
+    # Buscar utilidades existentes
+    utils_pattern = f"{base_path}/**/mapfre/utils/*.java"
+    for file_path in glob.glob(utils_pattern, recursive=True):
+        with open(file_path, 'r', encoding='utf-8') as f:
+            content = f.read()
+            analysis["utilities"].append({
+                "file": file_path,
+                "name": os.path.basename(file_path),
+                "content": content[:500] + "..." if len(content) > 500 else content
+            })
     
     return analysis
 
-def extract_methods_from_java(java_content):
-    """Extrae los nombres de métodos públicos de un archivo Java"""
-    methods = []
-    # Regex para capturar métodos públicos
-    method_pattern = r'public\s+(?:static\s+)?(?:\w+\s+)*(\w+)\s*\([^)]*\)'
-    matches = re.findall(method_pattern, java_content)
-    return matches[:10]  # Limitar a 10 métodos principales
-
-def extract_class_name_from_java(java_content):
-    """Extrae el nombre de la clase principal de un archivo Java"""
-    class_pattern = r'public\s+class\s+(\w+)'
-    match = re.search(class_pattern, java_content)
-    return match.group(1) if match else "Unknown"
-
 def analyze_framework_libraries():
-    """Analiza COMPLETAMENTE las librerías del framework para entender funciones disponibles"""
+    """Analiza las librerías del framework para entender funciones disponibles"""
     framework_analysis = {
         "libraries": []
     }
@@ -122,7 +88,7 @@ def analyze_framework_libraries():
     for lib_path in lib_paths:
         if os.path.exists(lib_path):
             lib_name = os.path.basename(lib_path)
-            print(f"   📚 Analizando librería {lib_name} en: {lib_path}")
+            print(f"   📚 Analizando {lib_name} en: {lib_path}")
             
             lib_analysis = {
                 "name": lib_name,
@@ -131,35 +97,22 @@ def analyze_framework_libraries():
             }
             
             java_pattern = f"{lib_path}/**/*.java"
-            java_files = glob.glob(java_pattern, recursive=True)
-            print(f"      📁 Encontrados {len(java_files)} archivos Java en {lib_name}")
-            
-            for file_path in java_files:
+            for file_path in glob.glob(java_pattern, recursive=True):
                 if file_path.endswith('.java'):
                     try:
                         with open(file_path, 'r', encoding='utf-8') as f:
                             content = f.read()
-                            class_name = extract_class_name_from_java(content)
-                            methods = extract_methods_from_java(content)
-                            relative_path = os.path.relpath(file_path, lib_path)
-                            
+                            class_name = os.path.basename(file_path).replace('.java', '')
                             lib_analysis["classes"].append({
                                 "name": class_name,
-                                "file_name": os.path.basename(file_path),
-                                "relative_path": relative_path,
-                                "methods": methods,
                                 "file": file_path,
-                                "content": content[:1200] + "..." if len(content) > 1200 else content
+                                "content": content[:800] + "..." if len(content) > 800 else content
                             })
                     except Exception as e:
                         print(f"      ⚠️  Error leyendo {file_path}: {e}")
             
             framework_analysis["libraries"].append(lib_analysis)
-            print(f"      ✅ {len(lib_analysis['classes'])} clases analizadas en {lib_name}")
-            
-            # Imprimir resumen de métodos encontrados
-            total_methods = sum(len(cls.get('methods', [])) for cls in lib_analysis['classes'])
-            print(f"      🔧 Total de métodos públicos encontrados: {total_methods}")
+            print(f"      📁 {len(lib_analysis['classes'])} clases encontradas")
         else:
             print(f"   ⚠️  Librería no encontrada: {lib_path}")
     
@@ -234,7 +187,7 @@ def analyze_additional_projects():
     return additional_projects
 
 def create_context_enhanced_prompt(original_prompt, code_analysis, framework_analysis, target_path, additional_projects=None):
-    """Agrega contexto COMPLETO del código existente, librerías del framework y proyectos adicionales al prompt original"""
+    """Agrega contexto del código existente, librerías del framework y proyectos adicionales al prompt original"""
     context_addition = f"""
 
 === CONTEXTO AUTOMÁTICO AGREGADO POR AUTOQA ===
@@ -243,91 +196,41 @@ REPOSITORIO OBJETIVO PARA CREAR/EDITAR ARCHIVOS: {target_path}
 =================================================================
 IMPORTANTE: Cuando uses create_java_file() o replace_string_in_file(), las rutas deben comenzar con: {target_path}/
 
-ANÁLISIS COMPLETO DEL PROYECTO OBJETIVO: {target_path}
-=====================================================
+ANÁLISIS DEL PROYECTO OBJETIVO: {target_path}
+============================================
 
-TODOS LOS ARCHIVOS JAVA EXISTENTES ({len(code_analysis['all_java_files'])} archivos):
+CÓDIGO EXISTENTE ENCONTRADO:
 
-RESUMEN DE CLASES Y MÉTODOS DISPONIBLES:
-"""
+Page Objects existentes ({len(code_analysis['page_objects'])} archivos):"""
     
-    # Crear un índice completo de clases y métodos
-    for java_file in code_analysis['all_java_files']:
-        context_addition += f"""
-📁 {java_file['relative_path']}
-   Clase: {java_file['class_name']}
-   Métodos disponibles: {', '.join(java_file['methods']) if java_file['methods'] else 'Ninguno detectado'}
-   
-```java
-{java_file['content']}
-```
-"""
-
-    # Agregar análisis DETALLADO de las librerías del framework
-    context_addition += f"""
-
-LIBRERÍAS DEL FRAMEWORK DISPONIBLES:
-=====================================
-IMPORTANTE: Estas librerías ya contienen métodos implementados. NO DUPLICAR funcionalidad.
-
-"""
+    for po in code_analysis['page_objects']:
+        context_addition += f"\n- {po['name']}:\n```java\n{po['content']}\n```\n"
     
+    context_addition += f"\nClases de Test existentes ({len(code_analysis['test_classes'])} archivos):\n"
+    for test in code_analysis['test_classes']:
+        context_addition += f"\n- {test['name']}:\n```java\n{test['content']}\n```\n"
+    
+    context_addition += f"\nUtilidades existentes ({len(code_analysis['utilities'])} archivos):\n"
+    for util in code_analysis['utilities']:
+        context_addition += f"\n- {util['name']}:\n```java\n{util['content']}\n```\n"
+    
+    # Agregar análisis de las librerías del framework
+    context_addition += f"\nLIBRERÍAS DEL FRAMEWORK DISPONIBLES:\n"
     for lib in framework_analysis['libraries']:
-        context_addition += f"""
-🏗️ LIBRERÍA: {lib['name'].upper()} ({len(lib['classes'])} clases)
-   Ubicación: {lib['path']}
-   
-   CLASES Y MÉTODOS DISPONIBLES:
-"""
+        context_addition += f"\n{lib['name'].upper()} ({len(lib['classes'])} clases):\n"
         for cls in lib['classes']:
-            context_addition += f"""   
-   📋 {cls['relative_path']} 
-      Clase: {cls['name']}
-      Métodos públicos: {', '.join(cls['methods']) if cls['methods'] else 'Ninguno detectado'}
-      
-   ```java
-   {cls['content']}
-   ```
-   
-"""
+            context_addition += f"\n- {cls['name']}:\n```java\n{cls['content']}\n```\n"
     
     # Agregar proyectos adicionales como contexto
     if additional_projects:
-        context_addition += f"""
-PROYECTOS DE REFERENCIA DESCARGADOS:
-===================================
-"""
+        context_addition += f"\nPROYECTOS DE REFERENCIA DESCARGADOS:\n"
         for project in additional_projects:
-            context_addition += f"""
-📂 {project['name'].upper()} - {project['path']}
-   Archivos importantes:
-"""
-            for file_info in project['files'][:15]:  # Aumentar a 15 archivos
-                context_addition += f"   - {file_info['name']}: {file_info['type']}\n"
+            context_addition += f"\n{project['name'].upper()} - {project['path']}:\n"
+            context_addition += f"Estructura del proyecto:\n"
+            for file_info in project['files'][:10]:  # Limitar a 10 archivos principales
+                context_addition += f"- {file_info['name']}: {file_info['type']}\n"
                 if file_info['type'] == 'java' and file_info.get('content'):
-                    context_addition += f"""
-```java
-{file_info['content'][:600]}...
-```
-"""
-    
-    # Instrucciones específicas para evitar duplicación
-    context_addition += f"""
-
-🚨 INSTRUCCIONES CRÍTICAS PARA EVITAR DUPLICACIÓN:
-=================================================
-1. ANTES de crear cualquier método, REVISAR si ya existe en las librerías del framework
-2. REUTILIZAR métodos existentes en lugar de crear nuevos
-3. Si necesitas funcionalidad de esperas, acciones, o utilidades, USAR las clases del framework
-4. Solo crear métodos nuevos si NO EXISTEN en el framework
-5. Al usar métodos del framework, importar las clases correctamente
-
-EJEMPLO DE REUTILIZACIÓN:
-- Si necesitas esperar un elemento, usar métodos de las librerías de selenium
-- Si necesitas realizar acciones, usar métodos de las librerías de acciones
-- Si necesitas utilidades, usar métodos de las librerías de utils
-
-"""
+                    context_addition += f"```java\n{file_info['content'][:400]}...\n```\n"
     
     # Combinar prompt original con contexto
     enhanced_prompt = f"{original_prompt}\n{context_addition}"
@@ -367,246 +270,45 @@ enhanced_prompt = create_context_enhanced_prompt(PROMPT, code_analysis, framewor
 # Herramientas del agente para trabajar con archivos
 @function_tool
 def create_java_file(file_path: str, content: str) -> str:
-    """Crea un archivo Java en la ruta especificada con el contenido proporcionado"""
-    try:
-        # Crear directorio si no existe
-        directory = os.path.dirname(file_path)
-        os.makedirs(directory, exist_ok=True)
-        
-        # Escribir archivo
-        with open(file_path, 'w', encoding='utf-8') as f:
-            f.write(content)
-        
-        print(f"✅ Archivo Java creado: {file_path}")
-        return f"Archivo creado exitosamente: {file_path}"
-    except Exception as e:
-        error_msg = f"Error creando archivo {file_path}: {e}"
-        print(f"❌ {error_msg}")
         return error_msg
 
 @function_tool
 def read_file(file_path: str) -> str:
-    """Lee el contenido de un archivo"""
-    try:
-        with open(file_path, 'r', encoding='utf-8') as f:
-            content = f.read()
-        print(f"📖 Archivo leído: {file_path}")
-        return content
-    except Exception as e:
-        error_msg = f"Error leyendo archivo {file_path}: {e}"
-        print(f"❌ {error_msg}")
         return error_msg
 
 @function_tool
 def replace_string_in_file(file_path: str, old_string: str, new_string: str) -> str:
-    """Reemplaza una cadena en un archivo existente"""
-    try:
-        # Leer archivo
-        with open(file_path, 'r', encoding='utf-8') as f:
-            content = f.read()
-        
-        # Verificar que el string existe
-        if old_string not in content:
-            return f"Error: La cadena especificada no se encontró en {file_path}"
-        
-        # Reemplazar
-        new_content = content.replace(old_string, new_string)
-        
-        # Escribir archivo modificado
-        with open(file_path, 'w', encoding='utf-8') as f:
-            f.write(new_content)
-        
-        print(f"✏️ Archivo modificado: {file_path}")
-        return f"Reemplazo exitoso en: {file_path}"
-    except Exception as e:
-        error_msg = f"Error modificando archivo {file_path}: {e}"
-        print(f"❌ {error_msg}")
         return error_msg
 
-# Herramientas adicionales para auto-reflexión
-@function_tool
-def create_checkpoint(checkpoint_name: str, current_progress: str, next_steps: str) -> str:
-    """Crea un checkpoint para auto-reflexión durante el proceso de generación"""
-    try:
-        checkpoint_content = f"""
-=== CHECKPOINT: {checkpoint_name} ===
-Timestamp: {asyncio.get_event_loop().time()}
-Progress: {current_progress}
-Next Steps: {next_steps}
-=== END CHECKPOINT ===
-"""
-        print(f"🔄 Checkpoint creado: {checkpoint_name}")
-        print(f"   📊 Progreso: {current_progress}")
-        print(f"   📋 Próximos pasos: {next_steps}")
-        return f"Checkpoint '{checkpoint_name}' creado exitosamente"
-    except Exception as e:
-        error_msg = f"Error creando checkpoint: {e}"
-        print(f"❌ {error_msg}")
-        return error_msg
-
-@function_tool
-def validate_code_quality(file_path: str, validation_criteria: str) -> str:
-    """Valida la calidad del código generado contra criterios específicos"""
-    try:
-        if not os.path.exists(file_path):
-            return f"Archivo no encontrado: {file_path}"
-        
-        with open(file_path, 'r', encoding='utf-8') as f:
-            content = f.read()
-        
-        # Validaciones básicas
-        validations = {
-            "has_package": "package " in content,
-            "has_imports": "import " in content,
-            "has_class": "public class " in content,
-            "has_methods": "public " in content and "(" in content,
-            "has_comments": "/*" in content or "//" in content,
-            "proper_indentation": not content.startswith(" ") and "\t" in content or "    " in content
-        }
-        
-        passed = sum(validations.values())
-        total = len(validations)
-        
-        result = f"Validación de calidad para {file_path}:\n"
-        result += f"✅ Criterios cumplidos: {passed}/{total}\n"
-        for criteria, passed in validations.items():
-            result += f"{'✅' if passed else '❌'} {criteria}\n"
-        
-        print(f"🔍 Validación completada: {passed}/{total} criterios cumplidos")
-        return result
-    except Exception as e:
-        error_msg = f"Error validando código: {e}"
-        print(f"❌ {error_msg}")
-        return error_msg
-
-@function_tool  
-def reflect_on_progress(current_task: str, completed_actions: str, identified_issues: str, improvement_plan: str) -> str:
-    """Permite al agente reflexionar sobre su progreso y planificar mejoras"""
-    try:
-        reflection = f"""
-🤔 AUTO-REFLEXIÓN DEL AGENTE
-============================
-Tarea actual: {current_task}
-Acciones completadas: {completed_actions}
-Problemas identificados: {identified_issues}
-Plan de mejora: {improvement_plan}
-
-Análisis crítico:
-- ¿Estoy reutilizando código del framework correctamente?
-- ¿He duplicado funcionalidad existente?
-- ¿El código generado sigue las mejores prácticas?
-- ¿Necesito ajustar mi enfoque?
-============================
-"""
-        print("🧠 Iniciando auto-reflexión...")
-        print(reflection)
-        return "Reflexión completada. Continuando con plan mejorado."
-    except Exception as e:
-        error_msg = f"Error en reflexión: {e}"
-        print(f"❌ {error_msg}")
-        return error_msg
-
-# Configurar modelo con capacidades avanzadas según el tipo
-if "gpt-5" in MODEL.lower():
-    # GPT-5 (todos los modelos) no soportan temperature, usar configuración con reasoning
-    # ModelSettings no acepta max_completion_tokens, usar solo parámetros compatibles
-    model_settings = ModelSettings(
-        truncation="auto", 
-        reasoning={"summary": "auto"}
-    )
-    print(f"⚙️ Configuración GPT-5: reasoning activado, sin temperature (max_tokens manejado por el sistema)")
-elif "claude" in MODEL.lower():
-    # Claude soporta temperature pero no reasoning
-    model_settings = ModelSettings(
-        truncation="auto",
-        temperature=0.7,
-        max_tokens=MAX_TOKENS_LIMIT
-    )
-    print(f"⚙️ Configuración Claude: temperature=0.7, max_tokens={MAX_TOKENS_LIMIT}")
-else:
-    # Todos los demás modelos (GPT-4, GPT-3.5, etc.) soportan temperature
-    model_settings = ModelSettings(
-        truncation="auto",
-        temperature=0.7,
-        max_tokens=MAX_TOKENS_LIMIT
-    )
-    print(f"⚙️ Configuración estándar para {MODEL}: temperature=0.7, max_tokens={MAX_TOKENS_LIMIT}")
-
-# Añadir capacidades de auto-reflexión al prompt con contexto
-print("🧠 Configurando agente con capacidades de auto-reflexión")
-
-# El enhanced_prompt ya contiene el PROMPT original + todo el contexto del framework
-# Solo añadimos las instrucciones de auto-reflexión
-auto_reflection_instructions = """
-
-=== CAPACIDADES DE AUTO-REFLEXIÓN ACTIVADAS ===
-Tienes acceso a herramientas de auto-reflexión. Úsalas durante tu trabajo:
-
-1. 🔄 create_checkpoint() - Crea checkpoints regulares para marcar progreso
-2. 🔍 validate_code_quality() - Valida la calidad del código que generes  
-3. 🤔 reflect_on_progress() - Reflexiona sobre tu trabajo y mejóralo
-
-PROCESO RECOMENDADO:
-- Checkpoint inicial → Análisis → Generación → Validación → Reflexión → Mejora si es necesario
-
-Estas herramientas son opcionales, úsalas cuando consideres que añaden valor.
-"""
-
-# Usar el prompt original con contexto + instrucciones de auto-reflexión
-final_instructions = enhanced_prompt + auto_reflection_instructions
-
-# Crear agente con herramientas ampliadas y auto-reflexión
+# Crear agente con herramientas de archivo
 agent = Agent(
     model=MODEL,
-    model_settings=model_settings,
-    name="AutoQA Reflective Code Generator Agent",
-    instructions=final_instructions,
-    tools=[
-        create_java_file, 
-        read_file, 
-        replace_string_in_file,
-        create_checkpoint,
-        validate_code_quality,
-        reflect_on_progress
-    ]
+    model_settings=ModelSettings(truncation="auto", reasoning={"summary": "auto"}),
+    name="Code Generator and File Editor Agent",
+    instructions=enhanced_prompt,
+    tools=[create_java_file, read_file, replace_string_in_file]
 )
 
 # Función para extraer y crear archivos del código generado
 # Funciones de extracción manual removidas - el agente crea archivos directamente
 
-# Ejecutar agente con auto-reflexión y razonamiento iterativo
+# Ejecutar agente
 async def main():
-    print("🚀 Iniciando AutoQA con capacidades de auto-reflexión...")
-
-    result = Runner.run_streamed(agent, PROMPT, max_turns=MAX_TURNS)
-
-    reflection_count = 0
-    checkpoint_count = 0
-    validation_count = 0
-
-    print("📊 Monitoreando proceso de auto-reflexión...")
+    # El enhanced_prompt ya contiene:
+    # 1. El PROMPT original del usuario (con su contexto y tarea)
+    # 2. El contexto de FRAMEWORK_LIB_PATHS 
+    # 3. El contexto de ADDITIONAL_PROJECT_PATHS
+    
+    result = Runner.run_streamed(agent, enhanced_prompt, max_turns=MAX_TURNS)
 
     async for event in result.stream_events():
-        if hasattr(event, "type"):
-            # Capturar razonamiento del agente
-            if event.type == "raw_response_event":
-                data = event.data
-                if hasattr(data, "type"):
-                    if data.type == "response.reasoning_summary_text.done":
-                        print(f"🧠 Razonamiento del agente: {data.text}")
-                    elif data.type == "response.function_calls.done":
-                        if hasattr(data, 'function_calls'):
-                            for call in data.function_calls:
-                                if hasattr(call, 'name'):
-                                    if call.name == "create_checkpoint":
-                                        checkpoint_count += 1
-                                        print(f"� Checkpoint #{checkpoint_count} creado")
-                                    elif call.name == "validate_code_quality":
-                                        validation_count += 1
-                                        print(f"🔍 Validación #{validation_count} ejecutada")
-                                    elif call.name == "reflect_on_progress":
-                                        reflection_count += 1
-                                        print(f"🤔 Auto-reflexión #{reflection_count} completada")
+        if hasattr(event, "type") and event.type == "raw_response_event":
+            data = event.data
+            if hasattr(data, "type") and data.type == "response.reasoning_summary_text.done":
+                print(f"🧠 Agent reasoning: {data.text}")
+
+    print(f"📝 Generated code output:\n{result.final_output}")
+    print(f"✅ Ejecución completada. Los archivos fueron creados en: {TARGET_PROJECT_PATH}")
 
 if __name__ == "__main__":
     print("Starting AutoQA code generation...")
