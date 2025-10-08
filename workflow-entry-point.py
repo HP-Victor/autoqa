@@ -577,17 +577,15 @@ agent = Agent(
 # Ejecutar agente con auto-reflexión y razonamiento iterativo
 async def main():
     print("🚀 Iniciando AutoQA con capacidades de auto-reflexión...")
-    
-    # Usar directamente el PROMPT de la variable de entorno
-    # No añadir más instrucciones aquí - ya están en las instructions del agente
-    result = await Runner.run_streamed(agent, PROMPT, max_turns=MAX_TURNS)
-    
+
+    result = Runner.run_streamed(agent, PROMPT, max_turns=MAX_TURNS)  # quitar await aquí
+
     reflection_count = 0
     checkpoint_count = 0
     validation_count = 0
-    
+
     print("📊 Monitoreando proceso de auto-reflexión...")
-    
+
     async for event in result.stream_events():
         if hasattr(event, "type"):
             # Capturar razonamiento del agente
@@ -597,7 +595,6 @@ async def main():
                     if data.type == "response.reasoning_summary_text.done":
                         print(f"🧠 Razonamiento del agente: {data.text}")
                     elif data.type == "response.function_calls.done":
-                        # Contar tipos de llamadas para estadísticas
                         if hasattr(data, 'function_calls'):
                             for call in data.function_calls:
                                 if hasattr(call, 'name'):
@@ -610,53 +607,6 @@ async def main():
                                     elif call.name == "reflect_on_progress":
                                         reflection_count += 1
                                         print(f"🤔 Auto-reflexión #{reflection_count} completada")
-    
-    # Estadísticas finales
-    print(f"""
-📊 ESTADÍSTICAS DE AUTO-REFLEXIÓN:
-================================
-✅ Checkpoints creados: {checkpoint_count}
-🔍 Validaciones ejecutadas: {validation_count}  
-🤔 Auto-reflexiones realizadas: {reflection_count}
-🎯 Máximo de turnos: {MAX_TURNS}
-
-📝 RESULTADO FINAL:
-{result.final_output}
-
-✅ Ejecución completada con auto-reflexión en: {TARGET_PROJECT_PATH}
-""")
-    
-    # Guardar resumen de la sesión con estadísticas
-    try:
-        summary_path = f"{TARGET_PROJECT_PATH}/AutoQA-Reflection-Summary.md"
-        with open(summary_path, 'w', encoding='utf-8') as f:
-            f.write(f"""# AutoQA - Resumen de Sesión con Auto-Reflexión
-
-## Configuración
-- **Modelo**: {MODEL}
-- **Máximo turnos**: {MAX_TURNS}
-- **Directorio objetivo**: {TARGET_PROJECT_PATH}
-
-## Estadísticas de Auto-Reflexión
-- **Checkpoints creados**: {checkpoint_count}
-- **Validaciones ejecutadas**: {validation_count}
-- **Auto-reflexiones realizadas**: {reflection_count}
-
-## Capacidades Utilizadas
-- ✅ Razonamiento iterativo con checkpoints
-- ✅ Auto-validación de código
-- ✅ Meta-cognición y mejora continua
-- ✅ Integración con {"Anthropic Workbench" if "claude" in MODEL.lower() else "OpenAI Assistants API"}
-
-## Resultado Final
-{result.final_output}
-
----
-*Generado por AutoQA con capacidades de auto-reflexión*
-""")
-        print(f"📄 Resumen guardado en: {summary_path}")
-    except Exception as e:
-        print(f"⚠️  No se pudo guardar el resumen: {e}")
 
 if __name__ == "__main__":
     print("Starting AutoQA code generation...")
