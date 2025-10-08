@@ -1,6 +1,6 @@
 import asyncio
 import os
-from agents import Agent, ModelSettings, Runner
+from agents import Agent, ModelSettings, Runner, function_tool
 import re
 import glob
 
@@ -268,6 +268,7 @@ for project in additional_projects:
 enhanced_prompt = create_context_enhanced_prompt(PROMPT, code_analysis, framework_analysis, TARGET_PROJECT_PATH, additional_projects)
 
 # Herramientas del agente para trabajar con archivos
+@function_tool
 def create_java_file(file_path: str, content: str) -> str:
     """Crea un archivo Java en la ruta especificada con el contenido proporcionado"""
     try:
@@ -286,6 +287,7 @@ def create_java_file(file_path: str, content: str) -> str:
         print(f"❌ {error_msg}")
         return error_msg
 
+@function_tool
 def read_file(file_path: str) -> str:
     """Lee el contenido de un archivo"""
     try:
@@ -298,6 +300,7 @@ def read_file(file_path: str) -> str:
         print(f"❌ {error_msg}")
         return error_msg
 
+@function_tool
 def replace_string_in_file(file_path: str, old_string: str, new_string: str) -> str:
     """Reemplaza una cadena en un archivo existente"""
     try:
