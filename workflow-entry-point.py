@@ -619,8 +619,8 @@ async def main():
     print(f"📋 Tarea del usuario: {PROMPT[:100]}..." if len(PROMPT) > 100 else f"📋 Tarea del usuario: {PROMPT}")
     
     # Ejecutar streaming correctamente usando stream_events()
-    result = runner.run_streamed(agent, PROMPT, max_turns=MAX_TURNS)
-    
+    result = Runner.run_streamed(agent, PROMPT, max_turns=MAX_TURNS)
+
     async for event in result.stream_events():
         if hasattr(event, "type"):
             # Capturar razonamiento del agente
