@@ -8,15 +8,20 @@ PROMPT = os.environ.get("PROMPT")
 if not PROMPT:
     raise ValueError("PROMPT environment variable is not set")
 
-# Elegir modelo: solo OpenAI GPT-5/pro porque no necesitamos ejecutar nada
-OPENAI_MODEL = os.environ.get("OPENAI_MODEL", "gpt-5-pro")
+# Elegir modelo desde variable de entorno
+MODEL = os.environ.get("OPENAI_MODEL", "gpt-5-pro")
 OPENAI_API_KEY = os.environ.get("OPENAI_API_KEY")
+ANTHROPIC_API_KEY = os.environ.get("ANTHROPIC_API_KEY")
 
-if not OPENAI_API_KEY:
-    raise ValueError("No OpenAI API key found. Set OPENAI_API_KEY")
-
-MODEL = OPENAI_MODEL
-print(f"✅ Using OpenAI GPT-5 for code generation: {MODEL}")
+# Determinar si es modelo de Claude o OpenAI
+if "claude" in MODEL.lower():
+    if not ANTHROPIC_API_KEY:
+        raise ValueError("Anthropic API key required for Claude models. Set ANTHROPIC_API_KEY")
+    print(f"✅ Using Claude model for code generation: {MODEL}")
+else:
+    if not OPENAI_API_KEY:
+        raise ValueError("OpenAI API key required for OpenAI models. Set OPENAI_API_KEY")
+    print(f"✅ Using OpenAI model for code generation: {MODEL}")
 
 # Crear agente
 agent = Agent(
