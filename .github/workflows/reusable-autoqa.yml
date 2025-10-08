@@ -79,6 +79,7 @@ jobs:
           TARGET_PROJECT_PATH: ${{ inputs.target_project_path || '../template-models' }}
           GITHUB_RUN_ID: ${{ github.run_id }}
         run: |
+          cd ..
           python workflow-entry-point.py
 
       - name: Upload modified target repository
