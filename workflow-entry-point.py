@@ -507,7 +507,7 @@ Análisis crítico:
         return error_msg
 
 # Configurar modelo con capacidades avanzadas según el tipo
-if "5" in MODEL.lower() and "gpt" in MODEL.lower():
+if "gpt-5" in MODEL.lower():
     # GPT-5 (todos los modelos) no soportan temperature, usar configuración con reasoning
     # ModelSettings no acepta max_completion_tokens, usar solo parámetros compatibles
     model_settings = ModelSettings(
@@ -578,7 +578,7 @@ agent = Agent(
 async def main():
     print("🚀 Iniciando AutoQA con capacidades de auto-reflexión...")
 
-    result = Runner.run_streamed(agent, PROMPT, max_turns=MAX_TURNS)  # quitar await aquí
+    result = Runner.run_streamed(agent, PROMPT, max_turns=MAX_TURNS)
 
     reflection_count = 0
     checkpoint_count = 0
