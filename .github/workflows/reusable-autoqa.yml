@@ -44,7 +44,7 @@ on:
         required: false
       GH_TOKEN:
         description: 'GitHub token with repo access for private repositories'
-        required: false
+        required: true
 
 jobs:
   run-autoqa:
@@ -67,11 +67,11 @@ jobs:
         with:
           repository: ${{ inputs.target_repo }}
           path: template-models
-          token: ${{ secrets.GH_TOKEN || github.token }}
+          token: ${{ secrets.GH_TOKEN }}
 
       - name: Checkout framework repositories
         env:
-          GH_TOKEN: ${{ secrets.GH_TOKEN || github.token }}
+          GH_TOKEN: ${{ secrets.GH_TOKEN }}
         run: |
           IFS=',' read -ra REPOS <<< "${{ inputs.framework_repos }}"
           for repo in "${REPOS[@]}"; do
@@ -82,7 +82,7 @@ jobs:
 
       - name: Checkout additional repositories
         env:
-          GH_TOKEN: ${{ secrets.GH_TOKEN || github.token }}
+          GH_TOKEN: ${{ secrets.GH_TOKEN }}
         run: |
           IFS=',' read -ra REPOS <<< "${{ inputs.additional_repos }}"
           for repo in "${REPOS[@]}"; do
