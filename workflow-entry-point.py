@@ -26,7 +26,7 @@ else:
     print(f"✅ Using OpenAI model for code generation: {MODEL}")
 
 # Configuración común de tokens
-MAX_TOKENS_LIMIT = int(os.environ.get("MAX_TOKENS_LIMIT", 8000))
+MAX_TOKENS_LIMIT = int(os.environ.get("MAX_TOKENS_LIMIT", 10000))
 print(f"🔧 Límite de tokens configurado: {MAX_TOKENS_LIMIT}")
 
 # Herramientas para el agente
