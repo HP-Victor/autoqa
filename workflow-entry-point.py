@@ -580,7 +580,7 @@ async def main():
     
     # Usar directamente el PROMPT de la variable de entorno
     # No añadir más instrucciones aquí - ya están en las instructions del agente
-    result = Runner.run(agent, PROMPT, max_turns=MAX_TURNS)
+    result = await Runner.run_streamed(agent, PROMPT, max_turns=MAX_TURNS)
     
     reflection_count = 0
     checkpoint_count = 0
