@@ -29,54 +29,84 @@ else:
 
 
 def analyze_existing_code(base_path):
-    """Analiza el código existente en el repositorio objetivo"""
+    """Analiza COMPLETAMENTE el código existente en el repositorio objetivo"""
     analysis = {
         "page_objects": [],
         "test_classes": [],
         "utilities": [],
+        "all_java_files": [],
         "structure": {}
     }
     
     if not os.path.exists(base_path):
         return analysis
     
-    # Buscar Page Objects existentes
-    page_pattern = f"{base_path}/**/mapfre/paginas/*.java"
-    for file_path in glob.glob(page_pattern, recursive=True):
-        with open(file_path, 'r', encoding='utf-8') as f:
-            content = f.read()
-            analysis["page_objects"].append({
-                "file": file_path,
-                "name": os.path.basename(file_path),
-                "content": content[:500] + "..." if len(content) > 500 else content
-            })
+    print(f"   🔍 Analizando TODOS los archivos Java en: {base_path}")
     
-    # Buscar Tests existentes
-    test_pattern = f"{base_path}/**/mapfre/casos/*.java"
-    for file_path in glob.glob(test_pattern, recursive=True):
-        with open(file_path, 'r', encoding='utf-8') as f:
-            content = f.read()
-            analysis["test_classes"].append({
-                "file": file_path,
-                "name": os.path.basename(file_path),
-                "content": content[:500] + "..." if len(content) > 500 else content
-            })
+    # Buscar TODOS los archivos Java en el proyecto
+    java_pattern = f"{base_path}/**/*.java"
+    all_java_files = glob.glob(java_pattern, recursive=True)
     
-    # Buscar utilidades existentes
-    utils_pattern = f"{base_path}/**/mapfre/utils/*.java"
-    for file_path in glob.glob(utils_pattern, recursive=True):
-        with open(file_path, 'r', encoding='utf-8') as f:
-            content = f.read()
-            analysis["utilities"].append({
-                "file": file_path,
-                "name": os.path.basename(file_path),
-                "content": content[:500] + "..." if len(content) > 500 else content
-            })
+    print(f"   📁 Encontrados {len(all_java_files)} archivos Java en total")
+    
+    for file_path in all_java_files:
+        try:
+            with open(file_path, 'r', encoding='utf-8') as f:
+                content = f.read()
+                file_name = os.path.basename(file_path)
+                relative_path = os.path.relpath(file_path, base_path)
+                
+                # Analizar el contenido para extraer métodos y clases importantes
+                methods = extract_methods_from_java(content)
+                class_name = extract_class_name_from_java(content)
+                
+                file_info = {
+                    "file": file_path,
+                    "name": file_name,
+                    "relative_path": relative_path,
+                    "class_name": class_name,
+                    "methods": methods,
+                    "content": content[:1000] + "..." if len(content) > 1000 else content
+                }
+                
+                # Clasificar por tipo/ubicación
+                if "/paginas/" in file_path or "Page" in file_name:
+                    analysis["page_objects"].append(file_info)
+                elif "/casos/" in file_path or "Test" in file_name:
+                    analysis["test_classes"].append(file_info)
+                elif "/utils/" in file_path or "Util" in file_name or "Helper" in file_name:
+                    analysis["utilities"].append(file_info)
+                
+                # Agregar a la lista completa independientemente
+                analysis["all_java_files"].append(file_info)
+                
+        except Exception as e:
+            print(f"      ⚠️  Error leyendo {file_path}: {e}")
+    
+    print(f"   📊 Clasificación encontrada:")
+    print(f"      - Page Objects: {len(analysis['page_objects'])}")
+    print(f"      - Test Classes: {len(analysis['test_classes'])}")  
+    print(f"      - Utilities: {len(analysis['utilities'])}")
+    print(f"      - Otros archivos Java: {len(analysis['all_java_files']) - len(analysis['page_objects']) - len(analysis['test_classes']) - len(analysis['utilities'])}")
     
     return analysis
 
+def extract_methods_from_java(java_content):
+    """Extrae los nombres de métodos públicos de un archivo Java"""
+    methods = []
+    # Regex para capturar métodos públicos
+    method_pattern = r'public\s+(?:static\s+)?(?:\w+\s+)*(\w+)\s*\([^)]*\)'
+    matches = re.findall(method_pattern, java_content)
+    return matches[:10]  # Limitar a 10 métodos principales
+
+def extract_class_name_from_java(java_content):
+    """Extrae el nombre de la clase principal de un archivo Java"""
+    class_pattern = r'public\s+class\s+(\w+)'
+    match = re.search(class_pattern, java_content)
+    return match.group(1) if match else "Unknown"
+
 def analyze_framework_libraries():
-    """Analiza las librerías del framework para entender funciones disponibles"""
+    """Analiza COMPLETAMENTE las librerías del framework para entender funciones disponibles"""
     framework_analysis = {
         "libraries": []
     }
@@ -88,7 +118,7 @@ def analyze_framework_libraries():
     for lib_path in lib_paths:
         if os.path.exists(lib_path):
             lib_name = os.path.basename(lib_path)
-            print(f"   📚 Analizando {lib_name} en: {lib_path}")
+            print(f"   📚 Analizando librería {lib_name} en: {lib_path}")
             
             lib_analysis = {
                 "name": lib_name,
@@ -97,22 +127,35 @@ def analyze_framework_libraries():
             }
             
             java_pattern = f"{lib_path}/**/*.java"
-            for file_path in glob.glob(java_pattern, recursive=True):
+            java_files = glob.glob(java_pattern, recursive=True)
+            print(f"      📁 Encontrados {len(java_files)} archivos Java en {lib_name}")
+            
+            for file_path in java_files:
                 if file_path.endswith('.java'):
                     try:
                         with open(file_path, 'r', encoding='utf-8') as f:
                             content = f.read()
-                            class_name = os.path.basename(file_path).replace('.java', '')
+                            class_name = extract_class_name_from_java(content)
+                            methods = extract_methods_from_java(content)
+                            relative_path = os.path.relpath(file_path, lib_path)
+                            
                             lib_analysis["classes"].append({
                                 "name": class_name,
+                                "file_name": os.path.basename(file_path),
+                                "relative_path": relative_path,
+                                "methods": methods,
                                 "file": file_path,
-                                "content": content[:800] + "..." if len(content) > 800 else content
+                                "content": content[:1200] + "..." if len(content) > 1200 else content
                             })
                     except Exception as e:
                         print(f"      ⚠️  Error leyendo {file_path}: {e}")
             
             framework_analysis["libraries"].append(lib_analysis)
-            print(f"      📁 {len(lib_analysis['classes'])} clases encontradas")
+            print(f"      ✅ {len(lib_analysis['classes'])} clases analizadas en {lib_name}")
+            
+            # Imprimir resumen de métodos encontrados
+            total_methods = sum(len(cls.get('methods', [])) for cls in lib_analysis['classes'])
+            print(f"      🔧 Total de métodos públicos encontrados: {total_methods}")
         else:
             print(f"   ⚠️  Librería no encontrada: {lib_path}")
     
@@ -187,7 +230,7 @@ def analyze_additional_projects():
     return additional_projects
 
 def create_context_enhanced_prompt(original_prompt, code_analysis, framework_analysis, target_path, additional_projects=None):
-    """Agrega contexto del código existente, librerías del framework y proyectos adicionales al prompt original"""
+    """Agrega contexto COMPLETO del código existente, librerías del framework y proyectos adicionales al prompt original"""
     context_addition = f"""
 
 === CONTEXTO AUTOMÁTICO AGREGADO POR AUTOQA ===
@@ -196,41 +239,91 @@ REPOSITORIO OBJETIVO PARA CREAR/EDITAR ARCHIVOS: {target_path}
 =================================================================
 IMPORTANTE: Cuando uses create_java_file() o replace_string_in_file(), las rutas deben comenzar con: {target_path}/
 
-ANÁLISIS DEL PROYECTO OBJETIVO: {target_path}
-============================================
+ANÁLISIS COMPLETO DEL PROYECTO OBJETIVO: {target_path}
+=====================================================
 
-CÓDIGO EXISTENTE ENCONTRADO:
+TODOS LOS ARCHIVOS JAVA EXISTENTES ({len(code_analysis['all_java_files'])} archivos):
 
-Page Objects existentes ({len(code_analysis['page_objects'])} archivos):"""
+RESUMEN DE CLASES Y MÉTODOS DISPONIBLES:
+"""
     
-    for po in code_analysis['page_objects']:
-        context_addition += f"\n- {po['name']}:\n```java\n{po['content']}\n```\n"
+    # Crear un índice completo de clases y métodos
+    for java_file in code_analysis['all_java_files']:
+        context_addition += f"""
+📁 {java_file['relative_path']}
+   Clase: {java_file['class_name']}
+   Métodos disponibles: {', '.join(java_file['methods']) if java_file['methods'] else 'Ninguno detectado'}
+   
+```java
+{java_file['content']}
+```
+"""
+
+    # Agregar análisis DETALLADO de las librerías del framework
+    context_addition += f"""
+
+LIBRERÍAS DEL FRAMEWORK DISPONIBLES:
+=====================================
+IMPORTANTE: Estas librerías ya contienen métodos implementados. NO DUPLICAR funcionalidad.
+
+"""
     
-    context_addition += f"\nClases de Test existentes ({len(code_analysis['test_classes'])} archivos):\n"
-    for test in code_analysis['test_classes']:
-        context_addition += f"\n- {test['name']}:\n```java\n{test['content']}\n```\n"
-    
-    context_addition += f"\nUtilidades existentes ({len(code_analysis['utilities'])} archivos):\n"
-    for util in code_analysis['utilities']:
-        context_addition += f"\n- {util['name']}:\n```java\n{util['content']}\n```\n"
-    
-    # Agregar análisis de las librerías del framework
-    context_addition += f"\nLIBRERÍAS DEL FRAMEWORK DISPONIBLES:\n"
     for lib in framework_analysis['libraries']:
-        context_addition += f"\n{lib['name'].upper()} ({len(lib['classes'])} clases):\n"
+        context_addition += f"""
+🏗️ LIBRERÍA: {lib['name'].upper()} ({len(lib['classes'])} clases)
+   Ubicación: {lib['path']}
+   
+   CLASES Y MÉTODOS DISPONIBLES:
+"""
         for cls in lib['classes']:
-            context_addition += f"\n- {cls['name']}:\n```java\n{cls['content']}\n```\n"
+            context_addition += f"""   
+   📋 {cls['relative_path']} 
+      Clase: {cls['name']}
+      Métodos públicos: {', '.join(cls['methods']) if cls['methods'] else 'Ninguno detectado'}
+      
+   ```java
+   {cls['content']}
+   ```
+   
+"""
     
     # Agregar proyectos adicionales como contexto
     if additional_projects:
-        context_addition += f"\nPROYECTOS DE REFERENCIA DESCARGADOS:\n"
+        context_addition += f"""
+PROYECTOS DE REFERENCIA DESCARGADOS:
+===================================
+"""
         for project in additional_projects:
-            context_addition += f"\n{project['name'].upper()} - {project['path']}:\n"
-            context_addition += f"Estructura del proyecto:\n"
-            for file_info in project['files'][:10]:  # Limitar a 10 archivos principales
-                context_addition += f"- {file_info['name']}: {file_info['type']}\n"
+            context_addition += f"""
+📂 {project['name'].upper()} - {project['path']}
+   Archivos importantes:
+"""
+            for file_info in project['files'][:15]:  # Aumentar a 15 archivos
+                context_addition += f"   - {file_info['name']}: {file_info['type']}\n"
                 if file_info['type'] == 'java' and file_info.get('content'):
-                    context_addition += f"```java\n{file_info['content'][:400]}...\n```\n"
+                    context_addition += f"""
+```java
+{file_info['content'][:600]}...
+```
+"""
+    
+    # Instrucciones específicas para evitar duplicación
+    context_addition += f"""
+
+🚨 INSTRUCCIONES CRÍTICAS PARA EVITAR DUPLICACIÓN:
+=================================================
+1. ANTES de crear cualquier método, REVISAR si ya existe en las librerías del framework
+2. REUTILIZAR métodos existentes en lugar de crear nuevos
+3. Si necesitas funcionalidad de esperas, acciones, o utilidades, USAR las clases del framework
+4. Solo crear métodos nuevos si NO EXISTEN en el framework
+5. Al usar métodos del framework, importar las clases correctamente
+
+EJEMPLO DE REUTILIZACIÓN:
+- Si necesitas esperar un elemento, usar métodos de las librerías de selenium
+- Si necesitas realizar acciones, usar métodos de las librerías de acciones
+- Si necesitas utilidades, usar métodos de las librerías de utils
+
+"""
     
     # Combinar prompt original con contexto
     enhanced_prompt = f"{original_prompt}\n{context_addition}"
