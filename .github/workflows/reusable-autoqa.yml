@@ -22,6 +22,16 @@ on:
         required: false
         type: string
         default: 'gpt-5-pro'
+      target_project_path:
+        description: 'Path to target project directory (relative to autoqa working directory)'
+        required: false
+        type: string
+        default: '../template-models'
+      framework_lib_paths:
+        description: 'Comma-separated paths to framework libraries (relative to autoqa working directory)'
+        required: false
+        type: string
+        default: '../selenium-driver-lib,../selenium-commons-lib'
     secrets:
       OPENAI_API_KEY:
         required: false
@@ -35,6 +45,7 @@ jobs:
       OPENAI_MODEL: ${{ inputs.model }}
       OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
       ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+      FRAMEWORK_LIB_PATHS: ${{ inputs.framework_lib_paths }}
     steps:
       - name: Checkout AutoQA repository
         uses: actions/checkout@v4
@@ -59,13 +70,23 @@ jobs:
         env:
           PROMPT: ${{ inputs.prompt }}
           MAX_TURNS: ${{ inputs.max_turns }}
+          TARGET_PROJECT_PATH: ${{ inputs.target_project_path || '../template-models' }}
+          GITHUB_RUN_ID: ${{ github.run_id }}
         run: |
           python workflow-entry-point.py
 
-      - name: Upload generated code artifacts
+      - name: Upload modified target repository
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: autoqa-generated-code
-          path: autoqa/generated_code/
+          name: autoqa-modified-repository
+          path: ${{ inputs.target_project_path || 'template-models' }}/
+          retention-days: 7
+
+      - name: Upload AutoQA execution summary
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: autoqa-execution-summary
+          path: ${{ inputs.target_project_path || 'template-models' }}/AutoQA-Generation-Summary.md
           retention-days: 7
