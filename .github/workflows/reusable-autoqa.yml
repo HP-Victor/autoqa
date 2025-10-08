@@ -132,10 +132,3 @@ jobs:
           path: template-models/
           retention-days: 7
 
-      - name: Upload AutoQA execution summary
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: autoqa-execution-summary
-          path: template-models/AutoQA-Generation-Summary.md
-          retention-days: 7
