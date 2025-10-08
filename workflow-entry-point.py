@@ -26,7 +26,7 @@ else:
     print(f"✅ Using OpenAI model for code generation: {MODEL}")
 
 # Configuración común de tokens
-MAX_TOKENS_LIMIT = int(8000)
+MAX_TOKENS_LIMIT = int(os.environ.get("MAX_TOKENS_LIMIT", 8000))
 print(f"🔧 Límite de tokens configurado: {MAX_TOKENS_LIMIT}")
 
 # Herramientas para el agente
@@ -509,13 +509,12 @@ Análisis crítico:
 # Configurar modelo con capacidades avanzadas según el tipo
 if "5" in MODEL.lower() and "gpt" in MODEL.lower():
     # GPT-5 (todos los modelos) no soportan temperature, usar configuración con reasoning
-    # Usar max_completion_tokens en lugar de max_tokens para modelos de razonamiento
+    # ModelSettings no acepta max_completion_tokens, usar solo parámetros compatibles
     model_settings = ModelSettings(
         truncation="auto", 
-        reasoning={"summary": "auto"},
-        max_completion_tokens=MAX_TOKENS_LIMIT
+        reasoning={"summary": "auto"}
     )
-    print(f"⚙️ Configuración GPT-5: reasoning activado, sin temperature, max_completion_tokens={MAX_TOKENS_LIMIT}")
+    print(f"⚙️ Configuración GPT-5: reasoning activado, sin temperature (max_tokens manejado por el sistema)")
 elif "claude" in MODEL.lower():
     # Claude soporta temperature pero no reasoning
     model_settings = ModelSettings(
