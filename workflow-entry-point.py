@@ -618,7 +618,10 @@ async def main():
     print("📊 Monitoreando proceso de auto-reflexión...")
     print(f"📋 Tarea del usuario: {PROMPT[:100]}..." if len(PROMPT) > 100 else f"📋 Tarea del usuario: {PROMPT}")
     
-    async for event in runner.run_streamed(agent, PROMPT, max_turns=MAX_TURNS):
+    # Ejecutar streaming correctamente usando stream_events()
+    result = runner.run_streamed(agent, PROMPT, max_turns=MAX_TURNS)
+    
+    async for event in result.stream_events():
         if hasattr(event, "type"):
             # Capturar razonamiento del agente
             if event.type == "raw_response_event":
