@@ -32,6 +32,11 @@ on:
         required: false
         type: string
         default: '../selenium-driver-lib,../selenium-commons-lib'
+      additional_project_paths:
+        description: 'Comma-separated paths to additional reference projects for context (relative to autoqa working directory)'
+        required: false
+        type: string
+        default: '../central-repo'
     secrets:
       OPENAI_API_KEY:
         required: false
@@ -46,6 +51,7 @@ jobs:
       OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
       ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
       FRAMEWORK_LIB_PATHS: ${{ inputs.framework_lib_paths }}
+      ADDITIONAL_PROJECT_PATHS: ${{ inputs.additional_project_paths }}
     steps:
       - name: Checkout AutoQA repository
         uses: actions/checkout@v4
@@ -80,7 +86,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: autoqa-modified-repository
-          path: ${{ inputs.target_project_path || 'template-models' }}/
+          path: template-models/
           retention-days: 7
 
       - name: Upload AutoQA execution summary
@@ -88,5 +94,5 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: autoqa-execution-summary
-          path: ${{ inputs.target_project_path || 'template-models' }}/AutoQA-Generation-Summary.md
+          path: template-models/AutoQA-Generation-Summary.md
           retention-days: 7

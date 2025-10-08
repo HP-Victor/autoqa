@@ -118,8 +118,76 @@ def analyze_framework_libraries():
     
     return framework_analysis
 
-def create_context_enhanced_prompt(original_prompt, code_analysis, framework_analysis, target_path):
-    """Agrega contexto del código existente y librerías del framework al prompt original"""
+def analyze_additional_projects():
+    """Analiza proyectos adicionales descargados para proporcionar contexto extra"""
+    additional_projects = []
+    
+    # Obtener paths de proyectos adicionales desde variables de entorno
+    additional_project_paths = os.environ.get("ADDITIONAL_PROJECT_PATHS", "")
+    if not additional_project_paths:
+        print("   ℹ️  No se especificaron proyectos adicionales (ADDITIONAL_PROJECT_PATHS vacío)")
+        return additional_projects
+    
+    project_paths = [path.strip() for path in additional_project_paths.split(",") if path.strip()]
+    if not project_paths:
+        print("   ℹ️  No se encontraron paths válidos en ADDITIONAL_PROJECT_PATHS")
+        return additional_projects
+    
+    for project_path in project_paths:
+        if os.path.exists(project_path):
+            project_name = os.path.basename(project_path)
+            print(f"   📂 Analizando proyecto adicional: {project_name} en {project_path}")
+            
+            project_analysis = {
+                "name": project_name,
+                "path": project_path,
+                "files": []
+            }
+            
+            # Buscar archivos Java, XML, properties, etc.
+            file_patterns = [
+                "**/*.java",
+                "**/*.xml", 
+                "**/*.properties",
+                "**/*.yml",
+                "**/*.yaml",
+                "**/README.md",
+                "**/pom.xml"
+            ]
+            
+            for pattern in file_patterns:
+                full_pattern = f"{project_path}/{pattern}"
+                for file_path in glob.glob(full_pattern, recursive=True):
+                    try:
+                        file_extension = os.path.splitext(file_path)[1][1:]  # Sin el punto
+                        file_name = os.path.relpath(file_path, project_path)
+                        
+                        file_info = {
+                            "name": file_name,
+                            "type": file_extension or "file",
+                            "path": file_path
+                        }
+                        
+                        # Leer contenido para archivos importantes
+                        if file_extension in ['java', 'xml', 'properties', 'md'] and os.path.getsize(file_path) < 5000:
+                            with open(file_path, 'r', encoding='utf-8') as f:
+                                content = f.read()
+                                file_info["content"] = content
+                        
+                        project_analysis["files"].append(file_info)
+                        
+                    except Exception as e:
+                        print(f"      ⚠️  Error leyendo {file_path}: {e}")
+            
+            additional_projects.append(project_analysis)
+            print(f"      📁 {len(project_analysis['files'])} archivos encontrados")
+        else:
+            print(f"   ⚠️  Proyecto adicional no encontrado: {project_path}")
+    
+    return additional_projects
+
+def create_context_enhanced_prompt(original_prompt, code_analysis, framework_analysis, target_path, additional_projects=None):
+    """Agrega contexto del código existente, librerías del framework y proyectos adicionales al prompt original"""
     context_addition = f"""
 
 === CONTEXTO AUTOMÁTICO AGREGADO POR AUTOQA ===
@@ -149,6 +217,17 @@ Page Objects existentes ({len(code_analysis['page_objects'])} archivos):"""
         for cls in lib['classes']:
             context_addition += f"\n- {cls['name']}:\n```java\n{cls['content']}\n```\n"
     
+    # Agregar proyectos adicionales como contexto
+    if additional_projects:
+        context_addition += f"\nPROYECTOS DE REFERENCIA DESCARGADOS:\n"
+        for project in additional_projects:
+            context_addition += f"\n{project['name'].upper()} - {project['path']}:\n"
+            context_addition += f"Estructura del proyecto:\n"
+            for file_info in project['files'][:10]:  # Limitar a 10 archivos principales
+                context_addition += f"- {file_info['name']}: {file_info['type']}\n"
+                if file_info['type'] == 'java' and file_info.get('content'):
+                    context_addition += f"```java\n{file_info['content'][:400]}...\n```\n"
+    
     # Combinar prompt original con contexto
     enhanced_prompt = f"{original_prompt}\n{context_addition}"
     
@@ -156,6 +235,11 @@ Page Objects existentes ({len(code_analysis['page_objects'])} archivos):"""
 
 # Configurar el directorio objetivo
 TARGET_PROJECT_PATH = os.environ.get("TARGET_PROJECT_PATH", "../template-models")
+print(f"🎯 Directorio objetivo configurado: {TARGET_PROJECT_PATH}")
+print(f"🗂️  Directorio de trabajo actual: {os.getcwd()}")
+print(f"🔍 ¿Existe el directorio objetivo?: {os.path.exists(TARGET_PROJECT_PATH)}")
+if os.path.exists(TARGET_PROJECT_PATH):
+    print(f"📁 Contenido del directorio objetivo: {os.listdir(TARGET_PROJECT_PATH)}")
 
 # Analizar código existente
 print(f"🔍 Analizando código existente en: {TARGET_PROJECT_PATH}")
@@ -170,8 +254,14 @@ framework_analysis = analyze_framework_libraries()
 for lib in framework_analysis['libraries']:
     print(f"   📚 Clases en {lib['name']}: {len(lib['classes'])}")
 
-# Crear prompt con contexto del código existente y librerías del framework
-enhanced_prompt = create_context_enhanced_prompt(PROMPT, code_analysis, framework_analysis, TARGET_PROJECT_PATH)
+# Analizar proyectos adicionales para contexto
+print(f"🔍 Analizando proyectos adicionales...")
+additional_projects = analyze_additional_projects()
+for project in additional_projects:
+    print(f"   📂 Archivos en {project['name']}: {len(project['files'])}")
+
+# Crear prompt con contexto del código existente, librerías del framework y proyectos adicionales
+enhanced_prompt = create_context_enhanced_prompt(PROMPT, code_analysis, framework_analysis, TARGET_PROJECT_PATH, additional_projects)
 
 # Crear agente
 agent = Agent(
@@ -216,6 +306,9 @@ async def main():
             f.write(f"### Librerías del Framework Analizadas:\n")
             for lib in framework_analysis['libraries']:
                 f.write(f"- Clases en {lib['name']}: {len(lib['classes'])}\n")
+            f.write(f"\n### Proyectos Adicionales de Referencia:\n")
+            for project in additional_projects:
+                f.write(f"- {project['name']}: {len(project['files'])} archivos\n")
             f.write(f"\n## Output Completo del Agente\n\n")
             f.write(f"```\n{result.final_output}\n```\n")
         
