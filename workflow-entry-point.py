@@ -25,6 +25,10 @@ else:
         raise ValueError("OpenAI API key required for OpenAI models. Set OPENAI_API_KEY")
     print(f"✅ Using OpenAI model for code generation: {MODEL}")
 
+# Configuración común de tokens
+MAX_TOKENS_LIMIT = int(os.environ.get("MAX_TOKENS_LIMIT", 10000))
+print(f"🔧 Límite de tokens configurado: {MAX_TOKENS_LIMIT}")
+
 # Herramientas para el agente
 
 
@@ -419,37 +423,242 @@ def replace_string_in_file(file_path: str, old_string: str, new_string: str) -> 
         print(f"❌ {error_msg}")
         return error_msg
 
-# Crear agente con herramientas de archivo
+# Herramientas adicionales para auto-reflexión
+@function_tool
+def create_checkpoint(checkpoint_name: str, current_progress: str, next_steps: str) -> str:
+    """Crea un checkpoint para auto-reflexión durante el proceso de generación"""
+    try:
+        checkpoint_content = f"""
+=== CHECKPOINT: {checkpoint_name} ===
+Timestamp: {asyncio.get_event_loop().time()}
+Progress: {current_progress}
+Next Steps: {next_steps}
+=== END CHECKPOINT ===
+"""
+        print(f"🔄 Checkpoint creado: {checkpoint_name}")
+        print(f"   📊 Progreso: {current_progress}")
+        print(f"   📋 Próximos pasos: {next_steps}")
+        return f"Checkpoint '{checkpoint_name}' creado exitosamente"
+    except Exception as e:
+        error_msg = f"Error creando checkpoint: {e}"
+        print(f"❌ {error_msg}")
+        return error_msg
+
+@function_tool
+def validate_code_quality(file_path: str, validation_criteria: str) -> str:
+    """Valida la calidad del código generado contra criterios específicos"""
+    try:
+        if not os.path.exists(file_path):
+            return f"Archivo no encontrado: {file_path}"
+        
+        with open(file_path, 'r', encoding='utf-8') as f:
+            content = f.read()
+        
+        # Validaciones básicas
+        validations = {
+            "has_package": "package " in content,
+            "has_imports": "import " in content,
+            "has_class": "public class " in content,
+            "has_methods": "public " in content and "(" in content,
+            "has_comments": "/*" in content or "//" in content,
+            "proper_indentation": not content.startswith(" ") and "\t" in content or "    " in content
+        }
+        
+        passed = sum(validations.values())
+        total = len(validations)
+        
+        result = f"Validación de calidad para {file_path}:\n"
+        result += f"✅ Criterios cumplidos: {passed}/{total}\n"
+        for criteria, passed in validations.items():
+            result += f"{'✅' if passed else '❌'} {criteria}\n"
+        
+        print(f"🔍 Validación completada: {passed}/{total} criterios cumplidos")
+        return result
+    except Exception as e:
+        error_msg = f"Error validando código: {e}"
+        print(f"❌ {error_msg}")
+        return error_msg
+
+@function_tool  
+def reflect_on_progress(current_task: str, completed_actions: str, identified_issues: str, improvement_plan: str) -> str:
+    """Permite al agente reflexionar sobre su progreso y planificar mejoras"""
+    try:
+        reflection = f"""
+🤔 AUTO-REFLEXIÓN DEL AGENTE
+============================
+Tarea actual: {current_task}
+Acciones completadas: {completed_actions}
+Problemas identificados: {identified_issues}
+Plan de mejora: {improvement_plan}
+
+Análisis crítico:
+- ¿Estoy reutilizando código del framework correctamente?
+- ¿He duplicado funcionalidad existente?
+- ¿El código generado sigue las mejores prácticas?
+- ¿Necesito ajustar mi enfoque?
+============================
+"""
+        print("🧠 Iniciando auto-reflexión...")
+        print(reflection)
+        return "Reflexión completada. Continuando con plan mejorado."
+    except Exception as e:
+        error_msg = f"Error en reflexión: {e}"
+        print(f"❌ {error_msg}")
+        return error_msg
+
+# Configurar modelo con capacidades avanzadas según el tipo
+if "5" in MODEL.lower() and "gpt" in MODEL.lower():
+    # GPT-5 (todos los modelos) no soportan temperature, usar configuración con reasoning
+    # ModelSettings no acepta max_completion_tokens, usar solo parámetros compatibles
+    model_settings = ModelSettings(
+        truncation="auto", 
+        reasoning={"summary": "auto"}
+    )
+    print(f"⚙️ Configuración GPT-5: reasoning activado, sin temperature (max_tokens manejado por el sistema)")
+elif "claude" in MODEL.lower():
+    # Claude soporta temperature pero no reasoning
+    model_settings = ModelSettings(
+        truncation="auto",
+        temperature=0.7,
+        max_tokens=MAX_TOKENS_LIMIT
+    )
+    print(f"⚙️ Configuración Claude: temperature=0.7, max_tokens={MAX_TOKENS_LIMIT}")
+else:
+    # Todos los demás modelos (GPT-4, GPT-3.5, etc.) soportan temperature
+    model_settings = ModelSettings(
+        truncation="auto",
+        temperature=0.7,
+        max_tokens=MAX_TOKENS_LIMIT
+    )
+    print(f"⚙️ Configuración estándar para {MODEL}: temperature=0.7, max_tokens={MAX_TOKENS_LIMIT}")
+
+# Añadir capacidades de auto-reflexión al prompt con contexto
+print("🧠 Configurando agente con capacidades de auto-reflexión")
+
+# El enhanced_prompt ya contiene el PROMPT original + todo el contexto del framework
+# Solo añadimos las instrucciones de auto-reflexión
+auto_reflection_instructions = """
+
+=== CAPACIDADES DE AUTO-REFLEXIÓN ACTIVADAS ===
+Tienes acceso a herramientas de auto-reflexión. Úsalas durante tu trabajo:
+
+1. 🔄 create_checkpoint() - Crea checkpoints regulares para marcar progreso
+2. 🔍 validate_code_quality() - Valida la calidad del código que generes  
+3. 🤔 reflect_on_progress() - Reflexiona sobre tu trabajo y mejóralo
+
+PROCESO RECOMENDADO:
+- Checkpoint inicial → Análisis → Generación → Validación → Reflexión → Mejora si es necesario
+
+Estas herramientas son opcionales, úsalas cuando consideres que añaden valor.
+"""
+
+# Usar el prompt original con contexto + instrucciones de auto-reflexión
+final_instructions = enhanced_prompt + auto_reflection_instructions
+
+# Crear agente con herramientas ampliadas y auto-reflexión
 agent = Agent(
     model=MODEL,
-    model_settings=ModelSettings(truncation="auto", reasoning={"summary": "auto"}),
-    name="Code Generator and File Editor Agent",
-    instructions=enhanced_prompt,
-    tools=[create_java_file, read_file, replace_string_in_file]
+    model_settings=model_settings,
+    name="AutoQA Reflective Code Generator Agent",
+    instructions=final_instructions,
+    tools=[
+        create_java_file, 
+        read_file, 
+        replace_string_in_file,
+        create_checkpoint,
+        validate_code_quality,
+        reflect_on_progress
+    ]
 )
 
 # Función para extraer y crear archivos del código generado
 # Funciones de extracción manual removidas - el agente crea archivos directamente
 
-# Ejecutar agente
+# Ejecutar agente con auto-reflexión y razonamiento iterativo
 async def main():
-    # El enhanced_prompt ya contiene:
-    # 1. El PROMPT original del usuario (con su contexto y tarea)
-    # 2. El contexto de FRAMEWORK_LIB_PATHS 
-    # 3. El contexto de ADDITIONAL_PROJECT_PATHS
+    print("🚀 Iniciando AutoQA con capacidades de auto-reflexión...")
     
-    result = Runner.run_streamed(agent, enhanced_prompt, max_turns=MAX_TURNS)
-
+    # Usar directamente el PROMPT de la variable de entorno
+    # No añadir más instrucciones aquí - ya están en las instructions del agente
+    result = Runner.run(agent, PROMPT, max_turns=MAX_TURNS)
+    
+    reflection_count = 0
+    checkpoint_count = 0
+    validation_count = 0
+    
+    print("📊 Monitoreando proceso de auto-reflexión...")
+    
     async for event in result.stream_events():
-        if hasattr(event, "type") and event.type == "raw_response_event":
-            data = event.data
-            if hasattr(data, "type") and data.type == "response.reasoning_summary_text.done":
-                print(f"🧠 Agent reasoning: {data.text}")
+        if hasattr(event, "type"):
+            # Capturar razonamiento del agente
+            if event.type == "raw_response_event":
+                data = event.data
+                if hasattr(data, "type"):
+                    if data.type == "response.reasoning_summary_text.done":
+                        print(f"🧠 Razonamiento del agente: {data.text}")
+                    elif data.type == "response.function_calls.done":
+                        # Contar tipos de llamadas para estadísticas
+                        if hasattr(data, 'function_calls'):
+                            for call in data.function_calls:
+                                if hasattr(call, 'name'):
+                                    if call.name == "create_checkpoint":
+                                        checkpoint_count += 1
+                                        print(f"� Checkpoint #{checkpoint_count} creado")
+                                    elif call.name == "validate_code_quality":
+                                        validation_count += 1
+                                        print(f"🔍 Validación #{validation_count} ejecutada")
+                                    elif call.name == "reflect_on_progress":
+                                        reflection_count += 1
+                                        print(f"🤔 Auto-reflexión #{reflection_count} completada")
+    
+    # Estadísticas finales
+    print(f"""
+📊 ESTADÍSTICAS DE AUTO-REFLEXIÓN:
+================================
+✅ Checkpoints creados: {checkpoint_count}
+🔍 Validaciones ejecutadas: {validation_count}  
+🤔 Auto-reflexiones realizadas: {reflection_count}
+🎯 Máximo de turnos: {MAX_TURNS}
 
-    print(f"📝 Generated code output:\n{result.final_output}")
-    print(f"✅ Ejecución completada. Los archivos fueron creados en: {TARGET_PROJECT_PATH}")
+📝 RESULTADO FINAL:
+{result.final_output}
+
+✅ Ejecución completada con auto-reflexión en: {TARGET_PROJECT_PATH}
+""")
+    
+    # Guardar resumen de la sesión con estadísticas
+    try:
+        summary_path = f"{TARGET_PROJECT_PATH}/AutoQA-Reflection-Summary.md"
+        with open(summary_path, 'w', encoding='utf-8') as f:
+            f.write(f"""# AutoQA - Resumen de Sesión con Auto-Reflexión
+
+## Configuración
+- **Modelo**: {MODEL}
+- **Máximo turnos**: {MAX_TURNS}
+- **Directorio objetivo**: {TARGET_PROJECT_PATH}
+
+## Estadísticas de Auto-Reflexión
+- **Checkpoints creados**: {checkpoint_count}
+- **Validaciones ejecutadas**: {validation_count}
+- **Auto-reflexiones realizadas**: {reflection_count}
+
+## Capacidades Utilizadas
+- ✅ Razonamiento iterativo con checkpoints
+- ✅ Auto-validación de código
+- ✅ Meta-cognición y mejora continua
+- ✅ Integración con {"Anthropic Workbench" if "claude" in MODEL.lower() else "OpenAI Assistants API"}
+
+## Resultado Final
+{result.final_output}
+
+---
+*Generado por AutoQA con capacidades de auto-reflexión*
+""")
+        print(f"📄 Resumen guardado en: {summary_path}")
+    except Exception as e:
+        print(f"⚠️  No se pudo guardar el resumen: {e}")
 
 if __name__ == "__main__":
     print("Starting AutoQA code generation...")
     asyncio.run(main())
-    print("Done")
+    print("Done") 
