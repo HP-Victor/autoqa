@@ -25,6 +25,10 @@ else:
         raise ValueError("OpenAI API key required for OpenAI models. Set OPENAI_API_KEY")
     print(f"✅ Using OpenAI model for code generation: {MODEL}")
 
+# Configuración común de tokens
+MAX_TOKENS_LIMIT = int(8000)
+print(f"🔧 Límite de tokens configurado: {MAX_TOKENS_LIMIT}")
+
 # Herramientas para el agente
 
 
@@ -502,13 +506,32 @@ Análisis crítico:
         print(f"❌ {error_msg}")
         return error_msg
 
-# Configurar modelo con capacidades avanzadas
-model_settings = ModelSettings(
-    truncation="auto", 
-    reasoning={"summary": "auto"},
-    temperature=0.7,  # Más creatividad para auto-reflexión
-    max_tokens=8000   # Mayor capacidad para razonamiento complejo
-)
+# Configurar modelo con capacidades avanzadas según el tipo
+if "5" in MODEL.lower() and "gpt" in MODEL.lower():
+    # GPT-5 (todos los modelos) no soportan temperature, usar configuración con reasoning
+    # Usar max_completion_tokens en lugar de max_tokens para modelos de razonamiento
+    model_settings = ModelSettings(
+        truncation="auto", 
+        reasoning={"summary": "auto"},
+        max_completion_tokens=MAX_TOKENS_LIMIT
+    )
+    print(f"⚙️ Configuración GPT-5: reasoning activado, sin temperature, max_completion_tokens={MAX_TOKENS_LIMIT}")
+elif "claude" in MODEL.lower():
+    # Claude soporta temperature pero no reasoning
+    model_settings = ModelSettings(
+        truncation="auto",
+        temperature=0.7,
+        max_tokens=MAX_TOKENS_LIMIT
+    )
+    print(f"⚙️ Configuración Claude: temperature=0.7, max_tokens={MAX_TOKENS_LIMIT}")
+else:
+    # Todos los demás modelos (GPT-4, GPT-3.5, etc.) soportan temperature
+    model_settings = ModelSettings(
+        truncation="auto",
+        temperature=0.7,
+        max_tokens=MAX_TOKENS_LIMIT
+    )
+    print(f"⚙️ Configuración estándar para {MODEL}: temperature=0.7, max_tokens={MAX_TOKENS_LIMIT}")
 
 # Añadir capacidades de auto-reflexión al prompt con contexto
 print("🧠 Configurando agente con capacidades de auto-reflexión")
