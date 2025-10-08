@@ -45,6 +45,10 @@ on:
       GH_TOKEN:
         description: 'GitHub token with repo access for private repositories'
         required: true
+  
+permissions:
+  contents: write
+  pull-requests: write
 
 jobs:
   run-autoqa:
@@ -55,6 +59,7 @@ jobs:
       ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
       FRAMEWORK_LIB_PATHS: ${{ inputs.framework_repos }}
       ADDITIONAL_PROJECT_PATHS: ${{ inputs.additional_repos }}
+      GH_TOKEN: ${{ secrets.GH_TOKEN }}
     steps:
       - name: Checkout AutoQA repository
         uses: actions/checkout@v4
@@ -67,28 +72,24 @@ jobs:
         with:
           repository: ${{ inputs.target_repo }}
           path: template-models
-          token: ${{ secrets.GH_TOKEN }}
+          token: ${{ env.GH_TOKEN }}
 
       - name: Checkout framework repositories
-        env:
-          GH_TOKEN: ${{ secrets.GH_TOKEN }}
         run: |
           IFS=',' read -ra REPOS <<< "${{ inputs.framework_repos }}"
           for repo in "${REPOS[@]}"; do
             repo_name=$(basename "$repo")
             echo "📦 Cloning framework: $repo as $repo_name"
-            git clone https://${GH_TOKEN}@github.com/$repo.git $repo_name
+            git clone https://${{ env.GH_TOKEN }}@github.com/$repo.git $repo_name
           done
 
       - name: Checkout additional repositories
-        env:
-          GH_TOKEN: ${{ secrets.GH_TOKEN }}
         run: |
           IFS=',' read -ra REPOS <<< "${{ inputs.additional_repos }}"
           for repo in "${REPOS[@]}"; do
             repo_name=$(basename "$repo")
             echo "📦 Cloning additional repo: $repo as $repo_name"
-            git clone https://${GH_TOKEN}@github.com/$repo.git $repo_name
+            git clone https://${{ env.GH_TOKEN }}@github.com/$repo.git $repo_name
           done
 
       - name: Set up Python
