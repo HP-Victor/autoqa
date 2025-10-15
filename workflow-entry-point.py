@@ -584,7 +584,7 @@ final_instructions = enhanced_prompt + auto_reflection_instructions
 agent = Agent(
     model=MODEL,
     model_settings=model_settings,
-    name="AutoQA Reflective Code Generator Agent",
+    name="Aut   e Code Generator Agent",
     instructions=final_instructions,
     tools=[
         create_java_file, 
