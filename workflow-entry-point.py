@@ -112,7 +112,7 @@ def analyze_framework_libraries():
     }
     
     # Obtener paths de librerías desde variables de entorno (separadas por comas)
-    framework_lib_paths = os.environ.get("FRAMEWORK_LIB_PATHS", "../selenium-driver-lib,../selenium-commons-lib")
+    framework_lib_paths = os.environ.get("FRAMEWORK_LIB_PATHS", "")
     lib_paths = [path.strip() for path in framework_lib_paths.split(",") if path.strip()]
     
     for lib_path in lib_paths:
@@ -195,7 +195,26 @@ def analyze_additional_projects():
                 "**/*.yml",
                 "**/*.yaml",
                 "**/README.md",
-                "**/pom.xml"
+                "**/pom.xml",
+                "**/build.gradle",
+                "**/settings.gradle",
+                #Añadir más patrones de más tipos de archivos si es necesario de todos los lenguajes
+                "**/*.scala",
+                "**/*.clj",
+                "**/*.el",
+                "**/*.pl",
+                "**/*.rb",
+                "**/*.go",
+                "**/*.php",
+                "**/*.swift",
+                "**/*.ts",
+                "**/*.json",
+                "**/*.md",
+                "**/*.txt",
+                "**/*.kt",
+                "**/*.js",
+                "**/*.css",
+                "**/*.html",
             ]
             
             for pattern in file_patterns:
