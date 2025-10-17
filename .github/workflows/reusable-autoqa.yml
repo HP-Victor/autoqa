@@ -42,7 +42,7 @@ on:
         required: false
       ANTHROPIC_API_KEY:
         required: false
-      GH_TOKEN:
+      GITHUB_TOKEN:
         description: 'GitHub token with repo access for private repositories'
         required: true
   
@@ -57,7 +57,7 @@ jobs:
       OPENAI_MODEL: ${{ inputs.model }}
       OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
       ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
-      GH_TOKEN: ${{ secrets.GH_TOKEN }}
+      GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
     steps:
       - name: Checkout AutoQA repository
         uses: actions/checkout@v4
@@ -71,7 +71,7 @@ jobs:
         with:
           repository: ${{ inputs.target_repo }}
           path: template-models
-          token: ${{ env.GH_TOKEN }}
+          token: ${{ env.GITHUB_TOKEN }}
 
       - name: Checkout framework repositories
         run: |
@@ -80,7 +80,7 @@ jobs:
           for repo in "${REPOS[@]}"; do
             repo_name=$(basename "$repo")
             echo "📦 Cloning framework: $repo as $repo_name"
-            git clone https://${{ env.GH_TOKEN }}@github.com/$repo.git $repo_name
+            git clone https://${{ env.GITHUB_TOKEN }}@github.com/$repo.git $repo_name
             
             # Agregar path al listado
             if [ -z "$FRAMEWORK_PATHS" ]; then
@@ -101,7 +101,7 @@ jobs:
           for repo in "${REPOS[@]}"; do
             repo_name=$(basename "$repo")
             echo "📦 Cloning additional repo: $repo as $repo_name"
-            git clone https://${{ env.GH_TOKEN }}@github.com/$repo.git $repo_name
+            git clone https://${{ env.GITHUB_TOKEN }}@github.com/$repo.git $repo_name
             
             # Agregar path al listado
             if [ -z "$ADDITIONAL_PATHS" ]; then
