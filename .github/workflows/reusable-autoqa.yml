@@ -71,7 +71,7 @@ jobs:
         with:
           repository: ${{ inputs.target_repo }}
           path: template-models
-          token: ${{ env.GITHUB_TOKEN }}
+          token: ${{ env.GH_TOKEN }}
 
       - name: Checkout framework repositories
         run: |
@@ -80,7 +80,7 @@ jobs:
           for repo in "${REPOS[@]}"; do
             repo_name=$(basename "$repo")
             echo "📦 Cloning framework: $repo as $repo_name"
-            git clone https://${{ env.GITHUB_TOKEN }}@github.com/$repo.git $repo_name
+            git clone https://${{ env.GH_TOKEN }}@github.com/$repo.git $repo_name
             
             # Agregar path al listado
             if [ -z "$FRAMEWORK_PATHS" ]; then
@@ -101,7 +101,7 @@ jobs:
           for repo in "${REPOS[@]}"; do
             repo_name=$(basename "$repo")
             echo "📦 Cloning additional repo: $repo as $repo_name"
-            git clone https://${{ env.GITHUB_TOKEN }}@github.com/$repo.git $repo_name
+            git clone https://${{ env.GH_TOKEN }}@github.com/$repo.git $repo_name
             
             # Agregar path al listado
             if [ -z "$ADDITIONAL_PATHS" ]; then
