@@ -26,17 +26,17 @@ on:
         description: 'Target repository to clone (format: owner/repo)'
         required: false
         type: string
-        default: 'HP-Victor/template-models'
+        default: 'HPVICT4_mapfre/template-models'
       framework_repos:
         description: 'Comma-separated framework repositories to clone (format: owner/repo,owner/repo)'
         required: false
         type: string
-        default: 'HP-Victor/selenium-driver-lib,HP-Victor/selenium-commons-lib'
+        default: 'HPVICT4_mapfre/selenium-driver-lib,HPVICT4_mapfre/selenium-commons-lib'
       additional_repos:
         description: 'Comma-separated additional repositories for context (format: owner/repo,owner/repo)'
         required: false
         type: string
-        default: 'HP-Victor/central-repo'
+        default: 'HPVICT4_mapfre/central-repo'
     secrets:
       OPENAI_API_KEY:
         required: false
