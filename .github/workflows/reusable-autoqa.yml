@@ -62,7 +62,7 @@ jobs:
       - name: Checkout AutoQA repository
         uses: actions/checkout@v4
         with:
-          repository: mapfre-tech/esp-calidad-qa-agentes
+          repository: HP-Victor/autoqa
           ref: feature/version_estable
           path: autoqa
 
