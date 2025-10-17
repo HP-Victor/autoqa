@@ -52,7 +52,7 @@ permissions:
 
 jobs:
   run-autoqa:
-    runs-on: ubuntu-latest
+    runs-on: [ self-hosted, mar, PRO ]
     env:
       OPENAI_MODEL: ${{ inputs.model }}
       OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
@@ -62,7 +62,7 @@ jobs:
       - name: Checkout AutoQA repository
         uses: actions/checkout@v4
         with:
-          repository: HP-Victor/autoqa
+          repository: mapfre-tech/esp-calidad-qa-agentes
           ref: feature/version_estable
           path: autoqa
 
