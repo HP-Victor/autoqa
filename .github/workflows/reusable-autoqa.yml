@@ -42,7 +42,7 @@ on:
         required: false
       ANTHROPIC_API_KEY:
         required: false
-      GITHUB_TOKEN:
+      GH_TOKEN:
         description: 'GitHub token with repo access for private repositories'
         required: true
   
@@ -57,7 +57,7 @@ jobs:
       OPENAI_MODEL: ${{ inputs.model }}
       OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
       ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
-      GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
     steps:
       - name: Checkout AutoQA repository
         uses: actions/checkout@v4
